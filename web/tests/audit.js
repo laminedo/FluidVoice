@@ -4,9 +4,9 @@
 // sideways scrolling, accessibility (axe-core) and 44pt touch targets on phones,
 // in light and dark mode at desktop and phone widths. Screenshots go to the output folder.
 //
-// Run from the web/ folder:
+// Run from the web/tests folder (its .gitignore keeps node_modules and shots out of git and off the website):
 //   npm install --no-save playwright axe-core && npx playwright install chromium
-//   node tests/audit.js index.html tests/shots
+//   node audit.js ../index.html shots
 const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
@@ -50,6 +50,11 @@ const results = { unit: [], console: [], overflow: [], axe: [], targets: [], flo
       ["new paragraph hello there", "\n\nHello there"],
       ["we can do it comma i.e. later", "We can do it, i.e. later"],
       ["the 50 percent rule", "The 50% rule"],
+      ["what percent of users agreed", "What percent of users agreed"],
+      ["I love hash browns", "I love hash browns"],
+      ["so do i period then we left", "So do I. Then we left"],
+      ["i chose plan b period we start monday", "I chose plan b. We start monday"],
+      ["use a tool comma e.g. a hammer", "Use a tool, e.g. a hammer"],
       ["", ""],
     ];
     for (const [input, expected] of cases) {
@@ -62,8 +67,10 @@ const results = { unit: [], console: [], overflow: [], axe: [], targets: [], flo
       cleanUrl: window.__fluidvoice.cleanUp("visit https://example.com/a?b=1 and mail me at bob@example.com ,thanks"),
       cleanDomain: window.__fluidvoice.cleanUp("it's on google.com.so go"),
       camel: window.__fluidvoice.capitalize("iPhone is great. macOS too"),
+      cleanWww: window.__fluidvoice.cleanUp("see www.example.de/kontakt ,or spiegel.de.ok"),
+      cleanFile: window.__fluidvoice.cleanUp("open report.pdf ,then reply.it was fun"),
     }));
-    const expect = { cleanPunct: "Do you agree?", cleanUrl: "Visit https://example.com/a?b=1 and mail me at bob@example.com, thanks", cleanDomain: "It's on google.com. So go", camel: "iPhone is great. macOS too" };
+    const expect = { cleanPunct: "Do you agree?", cleanUrl: "Visit https://example.com/a?b=1 and mail me at bob@example.com, thanks", cleanDomain: "It's on google.com. So go", camel: "iPhone is great. macOS too", cleanWww: "See www.example.de/kontakt, or spiegel.de. Ok", cleanFile: "Open report.pdf, then reply. It was fun" };
     for (const k of Object.keys(expect)) results.unit.push({ input: k, expected: expect[k], got: more[k], pass: more[k] === expect[k] });
     const clean = await page.evaluate(() => window.__fluidvoice.cleanUp("um so  i went there , and uh it was fine .new start"));
     results.unit.push({ input: "cleanUp", expected: "So I went there, and it was fine. New start", got: clean, pass: clean === "So I went there, and it was fine. New start" });
@@ -78,6 +85,7 @@ const results = { unit: [], console: [], overflow: [], axe: [], targets: [], flo
     ["de-DE", "er kommt um fünf Uhr", "Er kommt um fünf Uhr"],
     ["zh-CN", "我喜欢福路伊斯应用", "我喜欢FluidVoice应用", [{ id: "z", triggers: ["福路伊斯"], replacement: "FluidVoice" }]],
     ["hi-IN", "मैं किताब पढ़ता हूँ", "मैं किताब पढ़ता हूँ", [{ id: "h", triggers: ["कि"], replacement: "X" }]],
+    ["zh-CN", "我在用fluid voice写东西", "我在用FluidVoice写东西"],
   ]) {
     const ctx = await browser.newContext({ locale });
     const page = await ctx.newPage();
@@ -130,7 +138,13 @@ const results = { unit: [], console: [], overflow: [], axe: [], targets: [], flo
     results.flows.push({ flow: "fake mic: first dictation", got: firstText });
     results.flows.push({ flow: "fake mic: still listening 2.2 s after quick restart (expect Stop dictation, 1 running)", got: afterQuickRestart });
     results.flows.push({ flow: "fake mic: after final stop (expect 0 running)", got: final });
-    const ok = firstText === "Hello, world" && afterQuickRestart.label === "Stop dictation" && afterQuickRestart.running === 1 && final.running === 0 && final.text === "Hello, world\nSecond line";
+    // Space right after clicking a button with the mouse should start dictation, not press the button again.
+    await page.click('.nav-item[data-view="dictate"]');
+    await page.keyboard.press("Space"); await page.waitForTimeout(300);
+    const spaceAfterClick = await label();
+    if (spaceAfterClick === "Stop dictation") { await page.keyboard.press("Escape"); await page.waitForTimeout(600); }
+    results.flows.push({ flow: "fake mic: Space after clicking the Dictate tab (expect Stop dictation)", got: spaceAfterClick });
+    const ok = spaceAfterClick === "Stop dictation" && firstText === "Hello, world" && afterQuickRestart.label === "Stop dictation" && afterQuickRestart.running === 1 && final.running === 0 && final.text === "Hello, world\nSecond line";
     results.unit.push({ input: "fake mic state machine", expected: "pass", got: ok ? "pass" : JSON.stringify({ firstText, afterQuickRestart, final }), pass: ok });
     await ctx.close();
   }
