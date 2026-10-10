@@ -30,8 +30,8 @@ A browser version of FluidVoice: talk, and it writes clean text. It is one file,
 
 GitHub Pages serves the site from the **`gh-pages`** branch, which holds a copy of this `web` folder. GitHub Pages can only publish a whole branch or a `docs` folder, not a folder called `web`, so the app gets its own branch.
 
-1. **Turn on GitHub Pages (once).** In the repository, open **Settings → Pages**. Under **Build and deployment**, set **Source** to **Deploy from a branch**, choose **`gh-pages`** and **`/ (root)`**, and press **Save**. After a minute or two the site is live.
-2. **Publish a change.** Commit your changes to the `web` folder first. Then run `git subtree push --prefix web origin gh-pages` from the repository folder. Uncommitted edits aren't published. If Git says the push was rejected, ask Claude to republish the site.
+1. **GitHub Pages is already on.** GitHub turned it on when the `gh-pages` branch was first pushed. If the site ever shows a 404 page, open **Settings → Pages** and check that **Source** is **Deploy from a branch** with **`gh-pages`** and **`/ (root)`**.
+2. **Publish a change.** Commit your changes to the `web` folder first. Then run `git subtree push --prefix web origin gh-pages` from the repository folder. The site updates a minute or two later. Uncommitted edits aren't published. If Git says the push was rejected, ask Claude to republish the site.
 
 ## Good to know
 
