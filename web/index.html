@@ -1,0 +1,1620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FluidVoice Web</title>
+<meta name="description" content="Voice-to-text dictation in your browser, with spoken punctuation, filler-word removal and a custom dictionary.">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230A6E6C'/%3E%3Cpath d='M16 28v8M24 20v24M32 14v36M40 22v20M48 28v8' stroke='white' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+/* Layout: a macOS-style window. Translucent sidebar on the left, one content column on the right.
+   Under 760px the sidebar turns into an iOS tab bar fixed to the bottom of the screen. */
+:root {
+  --bg: #F5F5F7;
+  --surface: #FFFFFF;
+  --surface-2: #FAFAFC;
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill-2: rgba(118, 118, 128, 0.07);
+  --fg: #1D1D1F;
+  --fg-2: #515154;
+  --fg-3: #6E6E73;
+  --sep: rgba(60, 60, 67, 0.16);
+  --chrome: rgba(246, 246, 248, 0.82);
+  --red: #C00012;
+  --red-fill: #FF3B30;
+  --orange: #A65400;
+  --green: #1A7F37;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.06), 0 18px 48px rgba(0, 0, 0, 0.10);
+
+  /* Accent: FluidVoice's default cyan. JavaScript swaps these five values when you pick another accent. */
+  --accent: #3AC8C6;
+  --accent-ink-l: #0A6E6C;
+  --accent-ink-d: #3AC8C6;
+  --on-accent: #032B2A;
+  --accent-ink: var(--accent-ink-l);
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type scale follows Apple's text styles */
+  --t-large: 2.125rem;  /* Large Title 34 */
+  --t-title2: 1.375rem; /* Title 2 22 */
+  --t-title3: 1.25rem;  /* Title 3 20 */
+  --t-body: 1.0625rem;  /* Body 17 */
+  --t-callout: 1rem;    /* Callout 16 */
+  --t-subhead: 0.9375rem; /* Subhead 15 */
+  --t-foot: 0.8125rem;  /* Footnote 13 */
+  --t-cap: 0.75rem;     /* Caption 12 */
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --sidebar-w: 248px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --surface: #1C1C1E;
+    --surface-2: #242426;
+    --fill: rgba(118, 118, 128, 0.24);
+    --fill-2: rgba(118, 118, 128, 0.14);
+    --fg: #F5F5F7;
+    --fg-2: #C7C7CC;
+    --fg-3: #98989D;
+    --sep: rgba(84, 84, 88, 0.6);
+    --chrome: rgba(22, 22, 24, 0.78);
+    --red: #FF6961;
+    --red-fill: #FF453A;
+    --orange: #FFB340;
+    --green: #30D158;
+    --shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 18px 48px rgba(0, 0, 0, 0.6);
+    --accent-ink: var(--accent-ink-d);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #1C1C1E;
+  --surface-2: #242426;
+  --fill: rgba(118, 118, 128, 0.24);
+  --fill-2: rgba(118, 118, 128, 0.14);
+  --fg: #F5F5F7;
+  --fg-2: #C7C7CC;
+  --fg-3: #98989D;
+  --sep: rgba(84, 84, 88, 0.6);
+  --chrome: rgba(22, 22, 24, 0.78);
+  --red: #FF6961;
+  --red-fill: #FF453A;
+  --orange: #FFB340;
+  --green: #30D158;
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 18px 48px rgba(0, 0, 0, 0.6);
+  --accent-ink: var(--accent-ink-d);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-text);
+  font-size: var(--t-body);
+  line-height: 1.47;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent-ink) 60%, transparent); outline-offset: 2px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.ic { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ic-sm { width: 16px; height: 16px; }
+
+/* ---------- App frame ---------- */
+.app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100%; }
+.sidebar {
+  position: fixed; top: 0; bottom: 0; left: 0; width: var(--sidebar-w); z-index: 30;
+  display: flex; flex-direction: column; gap: 22px;
+  padding: 22px 12px 16px;
+  background: var(--chrome);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-right: 1px solid var(--sep);
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+.app-icon {
+  width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex: none;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 88%, white) 0%, var(--accent-ink-l) 100%);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.4), 0 2px 6px color-mix(in srgb, var(--accent-ink-l) 35%, transparent);
+  color: #fff;
+}
+.app-icon .ic { stroke-width: 2.4; width: 20px; height: 20px; }
+.brand-name { font-family: var(--font-display); font-weight: 600; font-size: var(--t-callout); letter-spacing: -0.02em; line-height: 1.2; }
+.brand-sub { font-size: var(--t-cap); color: var(--fg-3); letter-spacing: 0; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-label { font-size: var(--t-cap); font-weight: 600; color: var(--fg-3); padding: 0 10px 4px; letter-spacing: 0; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; min-height: 36px; width: 100%;
+  padding: 6px 10px; border: 0; border-radius: var(--r-sm); background: transparent;
+  font-size: var(--t-subhead); text-align: left; color: var(--fg);
+}
+.nav-item .ic { color: var(--accent-ink); }
+.nav-item:hover { background: var(--fill-2); }
+.nav-item[aria-current="page"] { background: var(--fill); font-weight: 600; }
+.nav-item .count { margin-left: auto; font-size: var(--t-cap); color: var(--fg-3); font-variant-numeric: tabular-nums; }
+.sidebar-foot { margin-top: auto; padding: 0 10px; font-size: var(--t-cap); color: var(--fg-3); line-height: 1.4; letter-spacing: 0; }
+
+.main { grid-column: 2; min-width: 0; padding-inline: clamp(16px, 4.5vw, 56px); padding-block: 36px 64px; }
+.view { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+.view-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.view-head h1 { margin: 0; font-family: var(--font-display); font-size: var(--t-large); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; text-wrap: balance; }
+.view-head p { margin: 6px 0 0; color: var(--fg-2); font-size: var(--t-callout); max-width: 60ch; }
+
+/* ---------- Shared controls ---------- */
+.card { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; padding: 7px 14px; border-radius: 999px; border: 0;
+  background: var(--fill); color: var(--fg); font-size: var(--t-subhead); font-weight: 500;
+  transition: background-color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+.btn:hover { background: color-mix(in srgb, var(--fill) 100%, var(--fg) 6%); }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+.btn .ic { width: 17px; height: 17px; }
+.btn-tinted { background: var(--accent-soft); color: var(--accent-ink); }
+.btn-tinted:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.btn-filled { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.btn-filled:hover { background: color-mix(in srgb, var(--accent) 88%, var(--fg) 12%); }
+.btn-danger { color: var(--red); }
+.btn-plain { background: transparent; color: var(--accent-ink); padding-inline: 8px; }
+.btn-plain:hover { background: var(--fill-2); }
+.icon-btn {
+  width: 36px; height: 36px; display: inline-grid; place-items: center; border-radius: 999px; border: 0;
+  background: transparent; color: var(--fg-2);
+}
+.icon-btn:hover { background: var(--fill); color: var(--fg); }
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 28px; padding: 3px 12px 3px 10px; border-radius: 999px;
+  background: var(--fill); font-size: var(--t-foot); font-weight: 500; color: var(--fg-2); letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); flex: none; }
+.pill[data-state="live"] { background: color-mix(in srgb, var(--red-fill) 14%, transparent); color: var(--red); }
+.pill[data-state="live"] .dot { background: var(--red-fill); animation: blink 1.2s ease-in-out infinite; }
+.pill[data-state="sample"] { background: var(--accent-soft); color: var(--accent-ink); }
+.pill[data-state="sample"] .dot { background: var(--accent-ink); animation: blink 1.2s ease-in-out infinite; }
+.pill[data-state="warn"] { background: color-mix(in srgb, var(--orange) 14%, transparent); color: var(--orange); }
+.pill[data-state="warn"] .dot { background: var(--orange); }
+@keyframes blink { 50% { opacity: 0.35; } }
+
+input[type="text"], input[type="search"], select {
+  min-height: 40px; width: 100%; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--sep); background: var(--surface-2); color: var(--fg); font-size: var(--t-subhead);
+}
+input::placeholder, textarea::placeholder { color: var(--fg-3); opacity: 1; }
+input:focus, select:focus { outline: none; border-color: var(--accent-ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+
+/* iOS-style switch */
+.switch { appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 51px; height: 31px; margin: 0; border-radius: 999px; background: var(--fill); cursor: pointer; transition: background-color 0.2s ease; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.16); transition: transform 0.22s cubic-bezier(.3,.7,.4,1); }
+.switch:checked { background: var(--green); }
+.switch:checked::after { transform: translateX(20px); }
+.switch:focus-visible { outline-offset: 3px; border-radius: 999px; }
+
+/* Segmented control */
+.segmented { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--fill); gap: 2px; flex-wrap: wrap; }
+.segmented button {
+  min-height: 30px; padding: 4px 14px; border: 0; border-radius: 7px; background: transparent;
+  font-size: var(--t-foot); font-weight: 500; color: var(--fg);
+}
+.segmented button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.04); font-weight: 600; }
+
+/* ---------- Dictate ---------- */
+.composer { padding: 0; overflow: hidden; }
+.composer-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 0 18px; flex-wrap: wrap; }
+.composer-tools { display: flex; gap: 2px; }
+.editor { position: relative; padding: 10px 22px 18px; }
+.editor textarea, .editor .live {
+  display: block; width: 100%; min-height: 168px; margin: 0; padding: 0; border: 0; background: transparent; resize: none;
+  font-family: var(--font-display); font-size: var(--t-title3); line-height: 1.5; letter-spacing: -0.015em; color: var(--fg);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.editor textarea:focus { outline: none; }
+.editor .live .interim { color: var(--fg-3); }
+.editor .live .caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 2px; vertical-align: -0.15em; background: var(--accent-ink); border-radius: 1px; animation: blink 1s steps(1) infinite; }
+.editor .live .base { color: var(--fg-2); }
+
+.wave-row { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--sep); background: var(--surface-2); }
+.wave { flex: 1; min-width: 0; height: 40px; display: block; }
+.timer { font-family: var(--font-rounded); font-variant-numeric: tabular-nums; font-size: var(--t-subhead); font-weight: 600; color: var(--fg-2); min-width: 3.2em; text-align: right; }
+
+.record-zone { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 4px; }
+.record-btn {
+  position: relative; width: 76px; height: 76px; border-radius: 50%; border: 0; display: grid; place-items: center;
+  background: var(--accent); color: var(--on-accent);
+  box-shadow: 0 0 0 6px var(--accent-soft), var(--shadow-lg);
+  transition: transform 0.18s cubic-bezier(.3,.7,.4,1), background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.record-btn .ic { width: 30px; height: 30px; stroke-width: 2; }
+.record-btn:hover { transform: scale(1.04); }
+.record-btn:active { transform: scale(0.96); }
+.record-btn[aria-pressed="true"] { background: var(--red-fill); color: #fff; box-shadow: 0 0 0 calc(6px + var(--level, 0) * 14px) color-mix(in srgb, var(--red-fill) 22%, transparent), var(--shadow-lg); }
+.record-btn:focus-visible { outline-offset: 10px; border-radius: 50%; }
+.record-hint { font-size: var(--t-foot); color: var(--fg-2); text-align: center; letter-spacing: 0; }
+kbd { font-family: var(--font-text); font-size: 0.92em; padding: 1px 6px; border-radius: 5px; background: var(--fill); border: 1px solid var(--sep); border-bottom-width: 2px; }
+
+.notice { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r-md); background: color-mix(in srgb, var(--orange) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--orange) 26%, transparent); font-size: var(--t-subhead); }
+.notice .ic { color: var(--orange); margin-top: 2px; }
+.notice strong { display: block; font-weight: 600; }
+.notice p { margin: 2px 0 10px; color: var(--fg-2); }
+.notice-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.actions .spacer { flex: 1; }
+.ai-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ai-label { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-foot); font-weight: 600; color: var(--fg-2); letter-spacing: 0; }
+.ai-label .ic { color: var(--accent-ink); width: 16px; height: 16px; }
+
+.howto { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 14px; align-items: center; padding: 18px 20px; }
+.howto-col { min-width: 0; }
+.eyebrow { font-size: var(--t-cap); font-weight: 600; color: var(--fg-3); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+.said { font-size: var(--t-subhead); color: var(--fg-2); font-style: italic; }
+.said mark { background: transparent; color: var(--accent-ink); font-style: normal; font-weight: 600; }
+.said s { color: var(--fg-3); }
+.wrote { font-family: var(--font-display); font-size: var(--t-body); font-weight: 500; }
+.howto .arrow { color: var(--fg-3); }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat { padding: 14px 16px; min-width: 0; }
+.stat-value { font-family: var(--font-rounded); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.stat-value small { font-size: var(--t-subhead); font-weight: 600; color: var(--fg-2); margin-left: 3px; letter-spacing: 0; }
+.stat-label { font-size: var(--t-foot); color: var(--fg-2); letter-spacing: 0; }
+.section-title { margin: 0; font-family: var(--font-display); font-size: var(--t-title3); font-weight: 600; letter-spacing: -0.02em; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.section-head .sub { font-size: var(--t-foot); color: var(--fg-2); letter-spacing: 0; }
+
+/* ---------- History ---------- */
+.chart-card { padding: 18px 20px 12px; }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { font-family: var(--font-text); font-size: 12px; fill: var(--fg-2); letter-spacing: 0; }
+.chart .val { font-family: var(--font-rounded); font-weight: 600; fill: var(--fg); font-variant-numeric: tabular-nums; }
+.chart .grid { stroke: var(--sep); stroke-width: 1; }
+.chart .bar { fill: var(--accent); }
+.chart .bar.today { fill: var(--accent-ink); }
+.chart .bar.zero { fill: var(--fill); }
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.search { position: relative; flex: 1; min-width: 200px; }
+.search .ic { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--fg-3); width: 17px; height: 17px; }
+.search input { padding-left: 34px; }
+.list { display: flex; flex-direction: column; }
+.list > * + * { border-top: 1px solid var(--sep); }
+.h-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; padding: 14px 18px; }
+.h-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--t-foot); color: var(--fg-2); letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.h-meta .when { font-weight: 600; color: var(--fg); }
+.h-text { grid-column: 1 / -1; margin: 0; font-size: var(--t-callout); white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.h-item.open .h-text { -webkit-line-clamp: unset; display: block; }
+.h-actions { display: flex; gap: 2px; grid-row: 1; grid-column: 2; margin: -6px -8px 0 0; }
+.tag { display: inline-flex; align-items: center; padding: 0 7px; border-radius: 5px; font-size: 0.6875rem; font-weight: 600; background: var(--accent-soft); color: var(--accent-ink); letter-spacing: 0.02em; text-transform: uppercase; }
+.empty { padding: 40px 24px; text-align: center; color: var(--fg-2); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.empty .ic { width: 34px; height: 34px; color: var(--fg-3); stroke-width: 1.5; }
+.empty strong { color: var(--fg); font-size: var(--t-callout); }
+.empty p { margin: 0; max-width: 42ch; font-size: var(--t-subhead); }
+
+/* ---------- Dictionary ---------- */
+.dict-form { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; padding: 18px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field label { font-size: var(--t-foot); font-weight: 600; color: var(--fg-2); letter-spacing: 0; }
+.hint { font-size: var(--t-cap); color: var(--fg-3); letter-spacing: 0; }
+.d-item { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.8fr) auto; gap: 12px; align-items: center; padding: 12px 10px 12px 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.chip { display: inline-flex; padding: 3px 10px; border-radius: 999px; background: var(--fill); font-size: var(--t-foot); color: var(--fg-2); letter-spacing: 0; overflow-wrap: anywhere; }
+.d-item .to { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.d-item .arrow { color: var(--fg-3); }
+
+/* ---------- Voice commands ---------- */
+.tester { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.tester-out { min-height: 56px; padding: 12px 14px; border-radius: var(--r-md); background: var(--fill-2); font-family: var(--font-display); font-size: var(--t-body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.cmd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.cmd-group h2 { margin: 0; padding: 14px 18px 8px; font-size: var(--t-foot); font-weight: 600; color: var(--fg-2); letter-spacing: 0; }
+.cmd { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 18px; font-size: var(--t-subhead); }
+.cmd + .cmd { border-top: 1px solid var(--sep); }
+.cmd .say { min-width: 0; }
+.cmd .say small { color: var(--fg-3); font-size: var(--t-foot); }
+.key { flex: none; min-width: 32px; height: 28px; padding: 0 8px; display: inline-grid; place-items: center; border-radius: 7px; background: var(--fill); font-family: var(--font-mono); font-size: var(--t-subhead); font-weight: 600; }
+
+/* ---------- Settings ---------- */
+.group { display: flex; flex-direction: column; gap: 8px; }
+.group-title { margin: 0; padding: 0 18px; font-size: var(--t-foot); font-weight: 600; color: var(--fg-2); letter-spacing: 0; }
+.group-foot { margin: 0; padding: 0 18px; font-size: var(--t-foot); color: var(--fg-2); letter-spacing: 0; max-width: 70ch; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 10px 18px; flex-wrap: wrap; }
+.row + .row { border-top: 1px solid var(--sep); }
+.row-text { min-width: 0; flex: 1 1 220px; }
+.row-text label, .row-text .label { display: block; font-size: var(--t-callout); }
+.row-text .desc { display: block; font-size: var(--t-foot); color: var(--fg-2); letter-spacing: 0; }
+.row select { width: auto; min-width: 190px; }
+.swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+.swatch { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08); position: relative; }
+.swatch[aria-checked="true"]::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--sw); }
+.status-ok { color: var(--green); font-weight: 600; }
+.status-off { color: var(--fg-2); font-weight: 600; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--t-foot); color: var(--fg-2); }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px);
+  display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 32px);
+  padding: 10px 18px; border-radius: 999px; background: color-mix(in srgb, var(--fg) 92%, transparent); color: var(--bg);
+  font-size: var(--t-subhead); font-weight: 500; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(.3,.7,.4,1); z-index: 50;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast .ic { width: 18px; height: 18px; }
+
+/* ---------- Phone: tab bar ---------- */
+@media (max-width: 760px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .sidebar {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: auto; height: auto; z-index: 40;
+    flex-direction: row; gap: 0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-right: 0; border-top: 1px solid var(--sep);
+  }
+  .brand, .nav-label, .sidebar-foot { display: none; }
+  .nav { flex-direction: row; flex: 1; justify-content: space-around; }
+  .nav-item { flex-direction: column; gap: 2px; min-height: 48px; padding: 4px 2px; font-size: 0.6875rem; font-weight: 500; text-align: center; letter-spacing: 0; color: var(--fg-2); }
+  .nav-item .ic { width: 24px; height: 24px; color: inherit; }
+  .nav-item:hover { background: transparent; }
+  .nav-item[aria-current="page"] { background: transparent; color: var(--accent-ink); font-weight: 600; }
+  .nav-item .count { display: none; }
+  .main { grid-column: 1; padding-block: 22px calc(96px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .howto { grid-template-columns: minmax(0, 1fr); }
+  .howto .arrow { transform: rotate(90deg); justify-self: start; }
+  .cmd-grid { grid-template-columns: minmax(0, 1fr); }
+  .dict-form { grid-template-columns: minmax(0, 1fr); }
+  .d-item { grid-template-columns: minmax(0, 1fr) auto; }
+  .d-item .arrow { display: none; }
+  .d-item .to { grid-column: 1; }
+  .d-item .icon-btn { grid-row: 1 / span 2; grid-column: 2; }
+  .editor textarea, .editor .live { min-height: 140px; font-size: 1.1875rem; }
+  /* Apple HIG: 44×44pt minimum hit target on touch screens */
+  .btn, .icon-btn { min-height: 44px; }
+  .icon-btn { width: 44px; height: 44px; }
+  .record-hint .btn-plain { min-height: 44px !important; }
+  input[type="text"], input[type="search"], select { min-height: 44px; font-size: 1rem; }
+  .segmented button { min-height: 40px; padding-inline: 16px; }
+  .swatches { gap: 2px; }
+  .swatch { width: 44px; height: 44px; background: transparent; box-shadow: none; }
+  .swatch::before { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08); }
+  .swatch[aria-checked="true"]::after { inset: 2px; }
+  .h-actions { margin: -10px -10px 0 0; }
+  .view-head h1 { font-size: 1.875rem; }
+}
+@media (hover: none) and (pointer: coarse) { .kbd-hint { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M4 10v4M8 6.5v11M12 3.5v17M16 7.5v9M20 10v4"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5h11a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></symbol>
+  <symbol id="i-bubble" viewBox="0 0 24 24"><path d="M4 5h16v11H9.5L5 19.5V16H4z"/><path d="M8 9h8M8 12h5"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5"/><path d="M15.5 8.5V6.5a2.5 2.5 0 0 0-2.5-2.5H6.5A2.5 2.5 0 0 0 4 6.5V13a2.5 2.5 0 0 0 2.5 2.5h2"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M10 11v6M14 11v6M6.5 7l.8 11.5A2 2 0 0 0 9.3 20.5h5.4a2 2 0 0 0 2-2L17.5 7M9.5 7V4.5h5V7"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11 3.5l1.7 4.3 4.3 1.7-4.3 1.7L11 15.5l-1.7-4.3L5 9.5l4.3-1.7z"/><path d="M18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z"/></symbol>
+  <symbol id="i-clean" viewBox="0 0 24 24"><path d="M4 6.5h13M4 11.5h9M4 16.5h6"/><path d="m13.5 17 2.8 2.8L21 14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5H14a5.5 5.5 0 0 1 0 11h-3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4.5 19.5h4l10-10-4-4-10 10z"/><path d="m13 7 4 4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.2h.01"/></symbol>
+</svg>
+
+<div class="app">
+  <aside class="sidebar" aria-label="FluidVoice">
+    <div class="brand">
+      <div class="app-icon" aria-hidden="true"><svg class="ic"><use href="#i-wave"/></svg></div>
+      <div>
+        <div class="brand-name">FluidVoice</div>
+        <div class="brand-sub">for the web</div>
+      </div>
+    </div>
+    <nav class="nav" aria-label="Sections">
+      <div class="nav-label">Library</div>
+      <button class="nav-item" data-view="dictate" type="button"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg><span>Dictate</span></button>
+      <button class="nav-item" data-view="history" type="button"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><span>History</span><span class="count" id="nav-history-count"></span></button>
+      <button class="nav-item" data-view="dictionary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg><span>Dictionary</span><span class="count" id="nav-dict-count"></span></button>
+      <button class="nav-item" data-view="commands" type="button"><svg class="ic" aria-hidden="true"><use href="#i-bubble"/></svg><span>Commands</span></button>
+      <button class="nav-item" data-view="settings" type="button"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg><span>Settings</span></button>
+    </nav>
+    <div class="sidebar-foot">Your history and dictionary are saved in this browser only.</div>
+  </aside>
+
+  <main class="main" id="main">
+
+    <!-- ===== Dictate ===== -->
+    <section class="view" id="view-dictate" aria-labelledby="h-dictate">
+      <header class="view-head">
+        <div>
+          <h1 id="h-dictate">Dictate</h1>
+          <p>Talk naturally. FluidVoice adds punctuation, drops the “um”s and fixes the words you taught it.</p>
+        </div>
+      </header>
+
+      <div class="notice" id="mic-notice" role="status" hidden>
+        <svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg>
+        <div>
+          <strong id="mic-notice-title">Microphone isn’t available here</strong>
+          <p id="mic-notice-body"></p>
+          <div class="notice-actions">
+            <button class="btn btn-tinted" type="button" data-action="sample"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>Play a sample dictation</button>
+            <button class="btn" type="button" data-action="dismiss-notice">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card composer">
+        <div class="composer-top">
+          <span class="pill" id="status" data-state="idle"><span class="dot" aria-hidden="true"></span><span id="status-text">Ready</span></span>
+          <div class="composer-tools">
+            <button class="icon-btn" type="button" id="btn-undo" title="Undo last change" aria-label="Undo last change" hidden><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg></button>
+            <button class="icon-btn" type="button" id="btn-copy" title="Copy text" aria-label="Copy text"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button>
+            <button class="icon-btn" type="button" id="btn-clear" title="Clear text" aria-label="Clear text"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="editor">
+          <label for="transcript" class="sr-only">Transcript</label>
+          <textarea id="transcript" spellcheck="true" placeholder="Press the microphone and start talking, or type here."></textarea>
+          <div class="live" id="live" aria-live="polite" hidden></div>
+        </div>
+        <div class="wave-row">
+          <canvas class="wave" id="wave" aria-hidden="true"></canvas>
+          <span class="timer" id="timer" aria-label="Recording time">0:00</span>
+        </div>
+      </div>
+
+      <div class="record-zone">
+        <button class="record-btn" id="record" type="button" aria-pressed="false" aria-label="Start dictation">
+          <svg class="ic" aria-hidden="true"><use href="#i-mic" id="record-icon"/></svg>
+        </button>
+        <div class="record-hint" id="record-hint"><span class="kbd-hint">Press <kbd>Space</kbd> to start and stop · </span><button class="btn-plain btn" type="button" data-action="sample" style="min-height:28px;padding:2px 6px">Play a sample</button></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-tinted" type="button" id="btn-cleanup" title="Remove filler words, fix spacing and capitals"><svg class="ic" aria-hidden="true"><use href="#i-clean"/></svg>Clean up</button>
+        <div class="ai-group" id="ai-group" hidden>
+          <span class="ai-label"><svg class="ic" aria-hidden="true"><use href="#i-sparkles"/></svg>Write Mode</span>
+          <button class="btn" type="button" data-rewrite="polish">Polish</button>
+          <button class="btn" type="button" data-rewrite="email">Email</button>
+          <button class="btn" type="button" data-rewrite="bullets">Bullet points</button>
+          <button class="btn" type="button" data-rewrite="shorter">Shorter</button>
+          <button class="btn btn-danger" type="button" id="btn-ai-stop" hidden><svg class="ic" aria-hidden="true"><use href="#i-stop"/></svg>Stop</button>
+        </div>
+      </div>
+
+      <div class="card howto" id="howto">
+        <div class="howto-col">
+          <div class="eyebrow">You say</div>
+          <div class="said">“hey team <mark>comma</mark> <s>um</s> the fluid voice demo is ready <mark>period</mark> can we ship it friday <mark>question mark</mark>”</div>
+        </div>
+        <svg class="ic arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
+        <div class="howto-col">
+          <div class="eyebrow">FluidVoice writes</div>
+          <div class="wrote" id="howto-out">Hey team, the FluidVoice demo is ready. Can we ship it Friday?</div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h2 class="section-title">Today</h2>
+        <span class="sub" id="today-sub"></span>
+      </div>
+      <div class="stats">
+        <div class="card stat"><div class="stat-value" id="st-words">0</div><div class="stat-label">Words dictated</div></div>
+        <div class="card stat"><div class="stat-value" id="st-sessions">0</div><div class="stat-label">Dictations</div></div>
+        <div class="card stat"><div class="stat-value"><span id="st-wpm">–</span><small>wpm</small></div><div class="stat-label">Speaking pace</div></div>
+        <div class="card stat"><div class="stat-value"><span id="st-saved">0</span><small>min</small></div><div class="stat-label">Saved vs. typing</div></div>
+      </div>
+    </section>
+
+    <!-- ===== History ===== -->
+    <section class="view" id="view-history" aria-labelledby="h-history" hidden>
+      <header class="view-head">
+        <div>
+          <h1 id="h-history">History</h1>
+          <p>Every dictation you finish is kept here, in this browser, until you delete it.</p>
+        </div>
+      </header>
+      <div class="card chart-card">
+        <div class="section-head" style="margin-bottom:8px">
+          <h2 class="section-title" style="font-size:var(--t-callout)">Words per day</h2>
+          <span class="sub" id="week-total"></span>
+        </div>
+        <svg class="chart" id="chart" viewBox="0 0 700 170" role="img" aria-labelledby="chart-desc"><desc id="chart-desc">Words dictated on each of the last seven days.</desc></svg>
+      </div>
+      <div class="toolbar">
+        <div class="search">
+          <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+          <label for="h-search" class="sr-only">Search history</label>
+          <input type="search" id="h-search" placeholder="Search dictations">
+        </div>
+        <span id="clear-history-zone"><button class="btn btn-danger" type="button" id="btn-clear-history">Clear history</button></span>
+      </div>
+      <div class="card list" id="h-list"></div>
+    </section>
+
+    <!-- ===== Dictionary ===== -->
+    <section class="view" id="view-dictionary" aria-labelledby="h-dict" hidden>
+      <header class="view-head">
+        <div>
+          <h1 id="h-dict">Dictionary</h1>
+          <p>Teach FluidVoice the names and words it hears wrong. When it hears a phrase on the left, it writes the word on the right.</p>
+        </div>
+      </header>
+      <form class="card dict-form" id="dict-form" novalidate>
+        <div class="field">
+          <label for="d-triggers">When I say</label>
+          <input type="text" id="d-triggers" placeholder="fluid voice, flu voice" autocomplete="off">
+          <span class="hint">Separate different spellings with commas.</span>
+        </div>
+        <div class="field">
+          <label for="d-replacement">Write</label>
+          <input type="text" id="d-replacement" placeholder="FluidVoice" autocomplete="off">
+          <span class="hint" id="d-error" role="alert">&nbsp;</span>
+        </div>
+        <button class="btn btn-filled" type="submit" style="margin-bottom:22px"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Add word</button>
+      </form>
+      <div class="card list" id="d-list"></div>
+    </section>
+
+    <!-- ===== Commands ===== -->
+    <section class="view" id="view-commands" aria-labelledby="h-cmd" hidden>
+      <header class="view-head">
+        <div>
+          <h1 id="h-cmd">Voice commands</h1>
+          <p>Say these words while you dictate and FluidVoice types the symbol instead. They are the same spoken commands the Mac app understands.</p>
+        </div>
+      </header>
+      <div class="card tester">
+        <div class="field">
+          <label for="tester-in">Type what you would say</label>
+          <input type="text" id="tester-in" autocomplete="off" value="um meet me at the cafe at five comma okay question mark new line thanks exclamation mark">
+        </div>
+        <div>
+          <div class="eyebrow">FluidVoice writes</div>
+          <div class="tester-out" id="tester-out" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="cmd-grid" id="cmd-grid"></div>
+    </section>
+
+    <!-- ===== Settings ===== -->
+    <section class="view" id="view-settings" aria-labelledby="h-set" hidden>
+      <header class="view-head">
+        <div>
+          <h1 id="h-set">Settings</h1>
+          <p>Changes save as you make them.</p>
+        </div>
+      </header>
+
+      <div class="group">
+        <h2 class="group-title">Appearance</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text"><span class="label" id="lbl-theme">Theme</span></div>
+            <div class="segmented" role="group" aria-labelledby="lbl-theme" id="theme-seg">
+              <button type="button" data-theme-opt="system">System</button>
+              <button type="button" data-theme-opt="light">Light</button>
+              <button type="button" data-theme-opt="dark">Dark</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-text"><span class="label" id="lbl-accent">Accent color</span><span class="desc">The same five colors as the Mac app.</span></div>
+            <div class="swatches" role="radiogroup" aria-labelledby="lbl-accent" id="swatches"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2 class="group-title">Dictation</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text"><label for="set-lang">Language</label><span class="desc">The language you will speak.</span></div>
+            <select id="set-lang"></select>
+          </div>
+          <div class="row">
+            <div class="row-text"><label for="set-punct">Spoken punctuation</label><span class="desc">Turn “comma”, “period” and “new line” into symbols.</span></div>
+            <input type="checkbox" class="switch" role="switch" id="set-punct">
+          </div>
+          <div class="row">
+            <div class="row-text"><label for="set-fillers">Remove filler words</label><span class="desc">Drops um, uh, er, hmm and similar sounds.</span></div>
+            <input type="checkbox" class="switch" role="switch" id="set-fillers">
+          </div>
+          <div class="row">
+            <div class="row-text"><label for="set-caps">Capitalize sentences</label><span class="desc">Starts each sentence with a capital letter.</span></div>
+            <input type="checkbox" class="switch" role="switch" id="set-caps">
+          </div>
+          <div class="row">
+            <div class="row-text"><label for="set-copy">Copy when I stop</label><span class="desc">Puts the finished text on your clipboard.</span></div>
+            <input type="checkbox" class="switch" role="switch" id="set-copy">
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2 class="group-title">AI enhancement</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text"><span class="label">Write Mode with Claude</span><span class="desc" id="ai-desc">Rewrites your dictation as polished text, an email, bullet points or a shorter version.</span></div>
+            <span id="ai-status" class="status-off">Checking…</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2 class="group-title">Privacy and data</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text"><span class="label">Dictation history</span><span class="desc" id="data-desc"></span></div>
+            <span id="clear-history-zone-2"><button class="btn btn-danger" type="button" id="btn-clear-history-2">Clear history</button></span>
+          </div>
+          <div class="row">
+            <div class="row-text"><span class="label">Dictionary</span><span class="desc">Put back the starter words and remove your own.</span></div>
+            <span id="reset-dict-zone"><button class="btn" type="button" id="btn-reset-dict">Reset dictionary</button></span>
+          </div>
+        </div>
+        <p class="group-foot">Your browser turns speech into text. Chrome and Edge send the audio to Google’s speech service; Safari uses Apple’s. For fully on-device dictation, use the FluidVoice Mac app.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span id="toast-text"></span></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------------- Storage (per browser; may be unavailable) ---------------- */
+  const store = {
+    get(key, fallback) {
+      try { const raw = localStorage.getItem(key); return raw == null ? fallback : JSON.parse(raw); }
+      catch { return fallback; }
+    },
+    set(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage blocked: keep working in memory */ }
+    }
+  };
+
+  const ACCENTS = {
+    cyan:   { name: "Cyan",   fill: "#3AC8C6", inkL: "#0A6E6C", inkD: "#3AC8C6", on: "#032B2A" },
+    green:  { name: "Green",  fill: "#22C55E", inkL: "#13703A", inkD: "#4ADE80", on: "#052E16" },
+    blue:   { name: "Blue",   fill: "#3B82F6", inkL: "#1A5CC8", inkD: "#6AA6FF", on: "#04162F" },
+    purple: { name: "Purple", fill: "#A855F7", inkL: "#7E2BC7", inkD: "#C99BFF", on: "#1E0A33" },
+    orange: { name: "Orange", fill: "#F59E0B", inkL: "#9A4D00", inkD: "#FBBF24", on: "#2B1A00" }
+  };
+
+  const LANGUAGES = [
+    ["en-US", "English (US)"], ["en-GB", "English (UK)"], ["en-AU", "English (Australia)"], ["en-IN", "English (India)"],
+    ["fr-FR", "Français"], ["es-ES", "Español (España)"], ["es-MX", "Español (México)"], ["de-DE", "Deutsch"],
+    ["it-IT", "Italiano"], ["pt-BR", "Português (Brasil)"], ["nl-NL", "Nederlands"], ["sv-SE", "Svenska"],
+    ["pl-PL", "Polski"], ["tr-TR", "Türkçe"], ["ru-RU", "Русский"], ["ar-SA", "العربية"], ["hi-IN", "हिन्दी"],
+    ["ja-JP", "日本語"], ["ko-KR", "한국어"], ["zh-CN", "中文 (普通话)"]
+  ];
+
+  const STARTER_DICTIONARY = [
+    { id: "s1", triggers: ["fluid voice", "flu voice", "fluid boys"], replacement: "FluidVoice" },
+    { id: "s2", triggers: ["g mail", "gee mail"], replacement: "Gmail" },
+    { id: "s3", triggers: ["mac book"], replacement: "MacBook" },
+    { id: "s4", triggers: ["friday"], replacement: "Friday" }
+  ];
+
+  const browserLang = (navigator.language || "en-US");
+  const DEFAULTS = {
+    theme: "system", accent: "cyan",
+    lang: LANGUAGES.some(([c]) => c === browserLang) ? browserLang : "en-US",
+    spokenPunctuation: true, removeFillers: true, autoCapitalize: true, autoCopy: false
+  };
+  let settings = Object.assign({}, DEFAULTS, store.get("fv.settings", {}));
+  let history = store.get("fv.history", []);
+  if (!Array.isArray(history)) history = [];
+  let dictionary = store.get("fv.dictionary", null);
+  if (!Array.isArray(dictionary)) dictionary = STARTER_DICTIONARY.map(e => ({ ...e }));
+
+  const saveSettings = () => store.set("fv.settings", settings);
+  const saveHistory = () => store.set("fv.history", history);
+  const saveDictionary = () => store.set("fv.dictionary", dictionary);
+
+  /* ---------------- Text formatting (ported from the Mac app's rules) ---------------- */
+  const FILLERS = new Set(["um", "uh", "er", "ah", "eh", "umm", "uhh", "err", "ahh", "ehh", "hmm", "hm", "mm", "mmm", "erm", "urm"]);
+  const TLDS = new Set(["ai", "app", "co", "com", "dev", "edu", "gov", "io", "me", "net", "org", "uk", "us", "html", "js", "json", "md", "py", "swift", "txt"]);
+
+  // Spacing: R = sticks to the word before, L = sticks to the word after, N = no space either side,
+  // S = space on both sides, B = line break.
+  const COMMAND_GROUPS = [
+    { title: "Punctuation", rules: [
+      [",", "R", ["comma"]],
+      [".", "R", ["period", "full stop"]],
+      ["?", "R", ["question mark"]],
+      ["!", "R", ["exclamation mark", "exclamation point"]],
+      [":", "R", ["colon"]],
+      [";", "R", ["semicolon", "semi colon"]],
+      ["…", "R", ["ellipsis", "dot dot dot"]],
+      ["-", "N", ["hyphen"]],
+      ["—", "S", ["em dash", "long dash"]],
+      [".", "N", ["dot"], "between a name and .com, .io, .org…"]
+    ]},
+    { title: "Symbols", rules: [
+      ["@", "N", ["at sign"]],
+      ["&", "S", ["ampersand"]],
+      ["#", "L", ["hashtag", "hash sign", "pound sign"]],
+      ["%", "R", ["percent sign"]],
+      ["*", "S", ["asterisk"]],
+      ["/", "N", ["slash", "forward slash"]],
+      ["\\", "N", ["backslash", "back slash"]],
+      ["_", "N", ["underscore"]],
+      ["|", "S", ["vertical bar"]],
+      ["~", "N", ["tilde"]]
+    ]},
+    { title: "Layout", rules: [
+      ["\n", "B", ["new line", "next line"]],
+      ["\n\n", "B", ["new paragraph"]]
+    ]},
+    { title: "Brackets and quotes", rules: [
+      ["(", "L", ["open parenthesis", "open paren", "left paren"]],
+      [")", "R", ["close parenthesis", "close paren", "right paren"]],
+      ["[", "L", ["open bracket", "left bracket"]],
+      ["]", "R", ["close bracket", "right bracket"]],
+      ["{", "L", ["open brace", "left brace"]],
+      ["}", "R", ["close brace", "right brace"]],
+      ["“", "L", ["open quote", "begin quote"]],
+      ["”", "R", ["close quote", "end quote", "unquote"]]
+    ]}
+
+  ];
+  const RULES = new Map();
+  let MAX_WORDS = 1;
+  for (const g of COMMAND_GROUPS) for (const [symbol, spacing, phrases] of g.rules) {
+    for (const p of phrases) {
+      RULES.set(p, { symbol, spacing, phrase: p });
+      MAX_WORDS = Math.max(MAX_WORDS, p.split(" ").length);
+    }
+  }
+  const norm = w => w.toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+
+  function removeFillers(text) {
+    return text.split(/[ \t]+/).filter(w => w && !FILLERS.has(norm(w))).join(" ");
+  }
+
+  function applySpokenPunctuation(text) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const tokens = [];
+    for (let i = 0; i < words.length;) {
+      let hit = null, len = 0;
+      for (let n = Math.min(MAX_WORDS, words.length - i); n >= 1; n--) {
+        const key = words.slice(i, i + n).map(norm).join(" ");
+        const rule = RULES.get(key);
+        if (!rule) continue;
+        if (rule.phrase === "dot" && !(i > 0 && i + 1 < words.length && TLDS.has(norm(words[i + 1])))) continue;
+        hit = rule; len = n; break;
+      }
+      if (hit) { tokens.push({ t: hit.symbol, sp: hit.spacing }); i += len; }
+      else { tokens.push({ t: words[i], sp: "W" }); i++; }
+    }
+    let out = "";
+    let glueNext = true;
+    for (const tok of tokens) {
+      const glueBefore = tok.sp === "R" || tok.sp === "N" || tok.sp === "B";
+      if (tok.sp === "B") out = out.replace(/[ \t]+$/, "");
+      // The recognizer sometimes adds its own punctuation; don't double it ("Hi,," -> "Hi,").
+      if (tok.sp === "R" && out.endsWith(tok.t)) { glueNext = false; continue; }
+      if (out && !glueBefore && !glueNext) out += " ";
+      out += tok.t;
+      glueNext = tok.sp === "L" || tok.sp === "N" || tok.sp === "B";
+    }
+    return out;
+  }
+
+  const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function applyDictionary(text) {
+    const pairs = [];
+    for (const e of dictionary) for (const t of e.triggers) if (t.trim()) pairs.push([t.trim(), e.replacement]);
+    pairs.sort((a, b) => b[0].length - a[0].length);
+    for (const [trigger, replacement] of pairs) {
+      const re = new RegExp("(?<![\\p{L}\\p{N}])" + escapeRe(trigger).replace(/\s+/g, "\\s+") + "(?![\\p{L}\\p{N}])", "giu");
+      text = text.replace(re, () => replacement);
+    }
+    return text;
+  }
+
+  function capitalize(text) {
+    let s = text.replace(/(^\s*|[.!?]\s+|\n\s*)(\p{Ll})/gu, (m, before, ch) => before + ch.toUpperCase());
+    if (settings.lang.startsWith("en")) s = s.replace(/(?<![\p{L}\p{N}'’])i(?=$|[\s,.;:!?'’])/gu, "I");
+    return s;
+  }
+
+  function formatTranscript(raw, opts = settings) {
+    let s = raw.trim();
+    if (!s) return "";
+    if (opts.removeFillers) s = removeFillers(s);
+    s = opts.spokenPunctuation ? applySpokenPunctuation(s) : s.replace(/\s+/g, " ");
+    s = applyDictionary(s);
+    if (opts.autoCapitalize) s = capitalize(s);
+    return s.trim();
+  }
+
+  // Local clean-up for text that is already written: fillers, spacing around punctuation, dictionary, capitals.
+  function cleanUp(text) {
+    const lines = text.split("\n").map(line => removeFillers(line)
+      .replace(/\s+([,.;:!?…])/g, "$1")                 // no space before punctuation
+      .replace(/([,;:!?…])(?=\p{L})/gu, "$1 ")           // one space after it
+      .replace(/(?<=\p{L}{2})\.(?=(\p{L}+))/gu, (m, next) => TLDS.has(next.toLowerCase()) ? "." : ". ") // "fine.new" -> "fine. new", keeps "google.com"
+      .replace(/[ \t]{2,}/g, " ")
+      .trim());
+    let s = applyDictionary(lines.join("\n").replace(/\n{3,}/g, "\n\n"));
+    return capitalize(s);
+  }
+
+  const countWords = s => (s.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) || []).length;
+
+  /* ---------------- DOM helpers ---------------- */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const el = (tag, attrs = {}, ...kids) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v;
+      else if (k === "text") node.textContent = v;
+      else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+      else if (v !== false && v != null) node.setAttribute(k, v === true ? "" : v);
+    }
+    for (const kid of kids) if (kid != null) node.append(kid);
+    return node;
+  };
+  const icon = (id, cls = "ic") => {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", cls); svg.setAttribute("aria-hidden", "true");
+    const use = document.createElementNS(ns, "use"); use.setAttribute("href", "#" + id);
+    svg.append(use); return svg;
+  };
+
+  let toastTimer;
+  function toast(message, iconId = "i-check") {
+    const t = $("#toast");
+    $("#toast-text").textContent = message;
+    $("use", t).setAttribute("href", "#" + iconId);
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  async function copyText(text) {
+    if (!text.trim()) { toast("Nothing to copy yet", "i-alert"); return false; }
+    try { await navigator.clipboard.writeText(text); toast("Copied"); return true; }
+    catch {
+      const ta = $("#transcript");
+      if (ta.value === text) { ta.focus(); ta.select(); }
+      try { if (document.execCommand("copy")) { toast("Copied"); return true; } } catch { /* fall through */ }
+      toast("Press ⌘C or Ctrl+C to copy the selected text", "i-alert");
+      return false;
+    }
+  }
+
+  /* ---------------- Theme and accent ---------------- */
+  const root = document.documentElement;
+  let themeSetByPage = false;
+  function applyTheme() {
+    if (settings.theme === "light" || settings.theme === "dark") { root.setAttribute("data-theme", settings.theme); themeSetByPage = true; }
+    else if (themeSetByPage) { root.removeAttribute("data-theme"); themeSetByPage = false; }
+    $$("[data-theme-opt]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.themeOpt === settings.theme)));
+    requestAnimationFrame(drawWave);
+  }
+  function applyAccent() {
+    const a = ACCENTS[settings.accent] || ACCENTS.cyan;
+    root.style.setProperty("--accent", a.fill);
+    root.style.setProperty("--accent-ink-l", a.inkL);
+    root.style.setProperty("--accent-ink-d", a.inkD);
+    root.style.setProperty("--on-accent", a.on);
+    $$(".swatch").forEach(s => { const on = s.dataset.accent === settings.accent; s.setAttribute("aria-checked", String(on)); s.tabIndex = on ? 0 : -1; });
+    requestAnimationFrame(drawWave);
+  }
+
+  /* ---------------- Navigation ---------------- */
+  const VIEWS = ["dictate", "history", "dictionary", "commands", "settings"];
+  function showView(name, push = true) {
+    if (!VIEWS.includes(name)) name = "dictate";
+    for (const v of VIEWS) $("#view-" + v).hidden = v !== name;
+    $$(".nav-item").forEach(b => b.dataset.view === name ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+    if (push) { try { history_replace(name); } catch { /* hash not available */ } }
+    if (name === "history") renderHistory();
+    if (name === "dictate") requestAnimationFrame(() => { sizeWave(); autosize(); });
+    window.scrollTo({ top: 0 });
+  }
+  function history_replace(name) { if (location.hash !== "#" + name) window.history.replaceState(null, "", "#" + name); }
+
+  /* ---------------- Dictation ---------------- */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const isFramed = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  const ta = $("#transcript");
+  const live = $("#live");
+  const recordBtn = $("#record");
+
+  const state = {
+    mode: "idle",          // idle | live | sample
+    base: "", finalRaw: "", interim: "",
+    startedAt: 0, elapsed: 0, timerId: 0,
+    rec: null, stopRequested: false, restarts: 0,
+    level: 0, levels: new Array(96).fill(0), meter: null,
+    undo: null
+  };
+
+  function setStatus(kind, text) {
+    const p = $("#status");
+    p.dataset.state = kind;
+    $("#status-text").textContent = text;
+  }
+
+  const fmtTime = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+
+  function joinText(base, addition) {
+    if (!addition) return base;
+    if (!base) return addition;
+    return base + (/\n$/.test(base) ? "" : " ") + addition;
+  }
+
+  function renderLive() {
+    const formatted = formatTranscript(state.finalRaw);
+    live.replaceChildren();
+    if (state.base) live.append(el("span", { class: "base", text: state.base + (formatted || state.interim ? " " : "") }));
+    live.append(document.createTextNode(formatted));
+    if (state.interim) live.append(el("span", { class: "interim", text: (formatted ? " " : "") + state.interim }));
+    live.append(el("span", { class: "caret", "aria-hidden": "true" }));
+    if (!state.base && !formatted && !state.interim) live.prepend(el("span", { class: "interim", text: state.mode === "sample" ? "" : "Listening…" }));
+  }
+
+  function enterRecordingUI(mode) {
+    state.mode = mode;
+    state.base = ta.value.replace(/\s+$/, "");
+    state.finalRaw = ""; state.interim = "";
+    state.startedAt = performance.now(); state.elapsed = 0;
+    ta.hidden = true; live.hidden = false;
+    recordBtn.setAttribute("aria-pressed", "true");
+    recordBtn.setAttribute("aria-label", mode === "sample" ? "Stop sample" : "Stop dictation");
+    $("#record-icon").setAttribute("href", "#i-stop");
+    setStatus(mode === "sample" ? "sample" : "live", mode === "sample" ? "Playing sample" : "Listening");
+    $("#howto").hidden = true;
+    clearInterval(state.timerId);
+    state.timerId = setInterval(() => {
+      state.elapsed = performance.now() - state.startedAt;
+      $("#timer").textContent = fmtTime(state.elapsed);
+    }, 250);
+    renderLive();
+    startLevels(mode);
+  }
+
+  function finishRecording({ sample = false } = {}) {
+    if (state.mode === "idle") return;
+    clearInterval(state.timerId);
+    stopLevels();
+    const elapsed = performance.now() - state.startedAt;
+    const raw = (state.finalRaw + " " + state.interim).trim();
+    const formatted = formatTranscript(raw);
+    state.mode = "idle";
+    ta.value = joinText(state.base, formatted);
+    live.hidden = true; ta.hidden = false;
+    recordBtn.setAttribute("aria-pressed", "false");
+    recordBtn.setAttribute("aria-label", "Start dictation");
+    $("#record-icon").setAttribute("href", "#i-mic");
+    if ($("#mic-notice").hidden) setStatus("idle", "Ready"); else setStatus("warn", "Microphone unavailable");
+    clearTimeout(state.watchdog);
+    $("#timer").textContent = fmtTime(elapsed);
+    autosize();
+    updateHowto();
+    const words = countWords(formatted);
+    if (words > 0) {
+      history.unshift({ id: Date.now().toString(36), text: formatted, raw, words, ms: Math.round(elapsed), at: Date.now(), sample });
+      if (history.length > 500) history.length = 500;
+      saveHistory();
+      renderStats();
+      renderNavCounts();
+      if (settings.autoCopy && !sample) copyText(formatted);
+      else toast(sample ? "Sample finished. Try Clean up or Write Mode." : `Saved ${words} ${words === 1 ? "word" : "words"} to History`);
+    }
+  }
+
+  function showMicNotice(title, body) {
+    $("#mic-notice-title").textContent = title;
+    $("#mic-notice-body").textContent = body;
+    $("#mic-notice").hidden = false;
+    setStatus("warn", "Microphone unavailable");
+  }
+
+  function micHelpText() {
+    if (isFramed) return "This preview can’t use your microphone. Open the FluidVoice web app file directly in Chrome, Edge or Safari to dictate. Everything else works here, so you can play a sample or type to try the formatting.";
+    return "Your browser can’t turn speech into text. Use Chrome, Edge or Safari to dictate. You can still type or play a sample to see how formatting works.";
+  }
+
+  async function micBlockedUpFront() {
+    try {
+      // Frames that aren't allowed the microphone (like an embedded preview) fail silently in some browsers.
+      if (document.featurePolicy && !document.featurePolicy.allowsFeature("microphone")) return true;
+      if (navigator.permissions && navigator.permissions.query) {
+        const p = await navigator.permissions.query({ name: "microphone" });
+        if (p.state === "denied") return true;
+      }
+    } catch { /* permission API not available: let the recognizer decide */ }
+    return false;
+  }
+
+  async function startDictation() {
+    if (state.mode !== "idle") return;
+    if (!SR) { showMicNotice("Dictation isn’t supported in this browser", micHelpText()); return; }
+    if (await micBlockedUpFront()) {
+      showMicNotice("Microphone access is blocked", isFramed ? micHelpText() : "Allow microphone access for this page in your browser’s address bar, then press the microphone again.");
+      return;
+    }
+    $("#mic-notice").hidden = true;
+    state.stopRequested = false; state.restarts = 0; state.heard = false;
+    enterRecordingUI("live");
+    startRecognizer();
+    // If the browser never starts capturing audio, say so instead of showing "Listening" forever.
+    clearTimeout(state.watchdog);
+    state.watchdog = setTimeout(() => {
+      if (state.mode === "live" && !state.heard) {
+        state.stopRequested = true;
+        try { state.rec && state.rec.abort(); } catch { /* already stopped */ }
+        finishRecording();
+        showMicNotice("Dictation didn’t start", "Your browser didn’t start listening. Check that a microphone is connected and allowed for this page, then try again. Chrome, Edge and Safari work best.");
+      }
+    }, 6000);
+  }
+
+  function startRecognizer() {
+    const rec = new SR();
+    state.rec = rec;
+    rec.lang = settings.lang;
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onaudiostart = () => { state.heard = true; };
+    rec.onresult = e => {
+      state.heard = true;
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) state.finalRaw += " " + r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      state.interim = interim.trim();
+      state.level = Math.max(state.level, 0.55);
+      renderLive();
+    };
+    rec.onerror = e => {
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      state.stopRequested = true;
+      const messages = {
+        "not-allowed": ["Microphone access is blocked", isFramed ? micHelpText() : "Allow microphone access for this page in your browser’s address bar, then press the microphone again."],
+        "service-not-allowed": ["Speech recognition is turned off", isFramed ? micHelpText() : "Your browser or system has speech recognition turned off. In Safari, turn on Siri and Dictation in System Settings, then try again."],
+        "audio-capture": ["No microphone found", "Connect a microphone, or check that another app isn’t using it, then try again."],
+        "network": ["Can’t reach the speech service", "Your browser needs an internet connection to turn speech into text. Check your connection and try again."],
+        "language-not-supported": ["This language isn’t supported", "Pick a different language in Settings and try again."]
+      };
+      const [title, body] = messages[e.error] || ["Dictation stopped", "Something interrupted speech recognition (" + e.error + "). Press the microphone to try again."];
+      showMicNotice(title, body);
+    };
+    rec.onend = () => {
+      // Chrome ends a session after a pause. Keep listening until the person presses stop.
+      if (state.mode === "live" && !state.stopRequested && state.restarts < 50) {
+        state.restarts++;
+        if (state.interim) { state.finalRaw += " " + state.interim; state.interim = ""; }
+        try { rec.start(); return; } catch { /* fall through to finish */ }
+      }
+      if (state.mode === "live") finishRecording();
+    };
+    try { rec.start(); }
+    catch { showMicNotice("Dictation couldn’t start", micHelpText()); finishRecording(); }
+  }
+
+  function stopDictation() {
+    if (state.mode === "live") {
+      state.stopRequested = true;
+      try { state.rec && state.rec.stop(); } catch { finishRecording(); }
+      setTimeout(() => { if (state.mode === "live") finishRecording(); }, 1500);
+    } else if (state.mode === "sample") {
+      clearTimeout(sample.timer);
+      finishRecording({ sample: true });
+    }
+  }
+
+  /* Sample dictation: plays a recorded-style transcript through the same pipeline. */
+  const SAMPLE_SCRIPT = "hey team comma um I just tried the fluid voice web app period it turns what I say into clean text uh almost instantly exclamation mark new paragraph can you send the notes to my g mail before friday question mark";
+  const sample = { timer: 0 };
+  function playSample() {
+    if (state.mode !== "idle") return;
+    $("#mic-notice").hidden = true;
+    showView("dictate");
+    enterRecordingUI("sample");
+    const words = SAMPLE_SCRIPT.split(" ");
+    let i = 0, chunk = [];
+    const step = () => {
+      if (state.mode !== "sample") return;
+      if (i >= words.length) {
+        state.finalRaw += " " + chunk.join(" "); state.interim = ""; renderLive();
+        sample.timer = setTimeout(() => finishRecording({ sample: true }), 500);
+        return;
+      }
+      chunk.push(words[i++]);
+      state.interim = chunk.join(" ");
+      state.level = 0.35 + Math.random() * 0.6;
+      if (chunk.length >= 5 && /^(period|comma|mark|paragraph|instantly)$/.test(words[i - 1])) {
+        state.finalRaw += " " + chunk.join(" "); chunk = []; state.interim = "";
+      }
+      renderLive();
+      sample.timer = setTimeout(step, 150 + Math.random() * 170);
+    };
+    sample.timer = setTimeout(step, 350);
+  }
+
+  /* ---------------- Audio level waveform ---------------- */
+  const wave = $("#wave");
+  let waveCtx = wave.getContext("2d");
+  let waveRaf = 0, waveDpr = 1;
+  function sizeWave() {
+    const r = wave.getBoundingClientRect();
+    if (!r.width) return;
+    waveDpr = Math.min(window.devicePixelRatio || 1, 2);
+    wave.width = Math.round(r.width * waveDpr);
+    wave.height = Math.round(r.height * waveDpr);
+    drawWave();
+  }
+  function drawWave() {
+    if (!wave.width) return;
+    const cs = getComputedStyle(root);
+    const active = state.mode !== "idle";
+    const color = active ? (state.mode === "live" ? cs.getPropertyValue("--red-fill") : cs.getPropertyValue("--accent")) : cs.getPropertyValue("--fg-3");
+    const w = wave.width, h = wave.height, n = state.levels.length;
+    const gap = 3 * waveDpr, barW = Math.max(2 * waveDpr, (w - gap * (n - 1)) / n);
+    waveCtx.clearRect(0, 0, w, h);
+    waveCtx.fillStyle = color.trim();
+    for (let i = 0; i < n; i++) {
+      const v = state.levels[i];
+      const bh = Math.max(2 * waveDpr, v * (h - 4 * waveDpr));
+      const x = i * (barW + gap);
+      waveCtx.globalAlpha = active ? 0.35 + 0.65 * (i / n) : 0.35;
+      roundRect(waveCtx, x, (h - bh) / 2, barW, bh, barW / 2);
+    }
+    waveCtx.globalAlpha = 1;
+  }
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); c.fill();
+  }
+  const isiOS = /iP(hone|ad|od)/.test(navigator.platform) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  async function startLevels(mode) {
+    state.levels.fill(0);
+    let analyser = null, data = null;
+    if (mode === "live" && !isiOS && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+        if (state.mode !== "live") { stream.getTracks().forEach(t => t.stop()); return; }
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const src = ctx.createMediaStreamSource(stream);
+        analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
+        src.connect(analyser);
+        data = new Uint8Array(analyser.fftSize);
+        state.meter = { stream, ctx };
+      } catch { analyser = null; }
+    }
+    let last = 0;
+    const tick = t => {
+      if (state.mode === "idle") return;
+      if (analyser) {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) { const d = (data[i] - 128) / 128; sum += d * d; }
+        state.level = Math.min(1, Math.sqrt(sum / data.length) * 4.5);
+      }
+      if (t - last > 55) {
+        last = t;
+        state.levels.push(state.level);
+        state.levels.shift();
+        if (!analyser) state.level *= 0.72;
+        recordBtn.style.setProperty("--level", state.level.toFixed(3));
+        drawWave();
+      }
+      waveRaf = requestAnimationFrame(tick);
+    };
+    cancelAnimationFrame(waveRaf);
+    waveRaf = requestAnimationFrame(tick);
+  }
+  function stopLevels() {
+    cancelAnimationFrame(waveRaf);
+    if (state.meter) {
+      state.meter.stream.getTracks().forEach(t => t.stop());
+      state.meter.ctx.close().catch(() => {});
+      state.meter = null;
+    }
+    state.level = 0;
+    recordBtn.style.setProperty("--level", "0");
+    drawWave();
+  }
+
+  /* ---------------- Editor tools ---------------- */
+  function autosize() {
+    ta.style.height = "auto";
+    ta.style.height = Math.max(ta.scrollHeight, 0) + "px";
+  }
+  function setEditorText(text, undoLabel) {
+    state.undo = { text: ta.value, label: undoLabel };
+    ta.value = text;
+    $("#btn-undo").hidden = false;
+    autosize(); updateHowto();
+  }
+  function updateHowto() { $("#howto").hidden = ta.value.trim().length > 0 || state.mode !== "idle"; }
+
+  /* ---------------- Write Mode (Claude, when the page runs inside Claude) ---------------- */
+  const REWRITES = {
+    polish: "Fix grammar, punctuation and word choice so it reads naturally. Keep the meaning, tone and length close to the original.",
+    email: "Turn it into a short, friendly email with a greeting and a sign-off line. Do not invent facts, names or dates.",
+    bullets: "Turn it into a concise bulleted list using \"- \" at the start of each line. One idea per bullet.",
+    shorter: "Make it about half as long while keeping every important point."
+  };
+  let sampleFn = null, aiController = null;
+  async function initAI() {
+    const status = $("#ai-status");
+    try {
+      sampleFn = window.claude && typeof window.claude.use === "function" ? await window.claude.use("sample") : null;
+    } catch { sampleFn = null; }
+    if (sampleFn) {
+      $("#ai-group").hidden = false;
+      status.textContent = "Available"; status.className = "status-ok";
+    } else {
+      status.textContent = "Not available here"; status.className = "status-off";
+      $("#ai-desc").textContent = "Rewrites your dictation with Claude. It works when this app is opened inside Claude. Clean up works everywhere.";
+    }
+  }
+  async function rewrite(kind) {
+    const text = ta.value.trim();
+    if (!text) { toast("Dictate or type something first", "i-alert"); return; }
+    if (!sampleFn || aiController) return;
+    const before = ta.value;
+    const buttons = $$("[data-rewrite]");
+    buttons.forEach(b => b.disabled = true);
+    $("#btn-ai-stop").hidden = false;
+    setStatus("sample", "Thinking…");
+    aiController = new AbortController();
+    const prompt = "You are Write Mode inside FluidVoice, a dictation app. Rewrite the dictated text below.\n" +
+      "Task: " + REWRITES[kind] + "\n" +
+      "Write in the same language as the text. Reply with only the rewritten text: no preface, no quotes, no notes.\n\n" +
+      "<dictation>\n" + text + "\n</dictation>";
+    try {
+      const { text: out } = await sampleFn(prompt, {
+        modelTier: "quick", signal: aiController.signal,
+        onText: ({ text: partial }) => { ta.value = partial; autosize(); setStatus("sample", "Writing…"); }
+      });
+      ta.value = before;
+      setEditorText(out.trim(), "Write Mode");
+      toast("Rewritten. Use Undo to go back.", "i-sparkles");
+    } catch (e) {
+      const keep = e && e.text;
+      ta.value = before; autosize();
+      const msg = {
+        not_granted: "Claude wasn’t allowed for this page, so Write Mode is off for now.",
+        rate_limited: "Claude is busy. Wait a moment and try again.",
+        aborted: "Stopped. Your text is unchanged."
+      }[e && e.code] || (e && e.name === "AbortError" ? "Stopped. Your text is unchanged." : "Write Mode couldn’t finish. Your text is unchanged.");
+      if (keep && e.code !== "aborted") { /* keep the original text: a partial rewrite is not useful here */ }
+      if (e && e.code === "not_granted") $("#ai-group").hidden = true;
+      toast(msg, "i-alert");
+    } finally {
+      aiController = null;
+      buttons.forEach(b => b.disabled = false);
+      $("#btn-ai-stop").hidden = true;
+      setStatus("idle", "Ready");
+    }
+  }
+
+  /* ---------------- Stats and history ---------------- */
+  const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
+  function renderStats() {
+    const today = dayKey(Date.now());
+    const items = history.filter(h => !h.sample && dayKey(h.at) === today);
+    const words = items.reduce((a, h) => a + h.words, 0);
+    const ms = items.reduce((a, h) => a + h.ms, 0);
+    const wpm = ms > 3000 ? Math.round(words / (ms / 60000)) : null;
+    const saved = Math.max(0, words / 40 - ms / 60000); // typing at 40 words per minute
+    $("#st-words").textContent = words.toLocaleString();
+    $("#st-sessions").textContent = items.length.toLocaleString();
+    $("#st-wpm").textContent = wpm ? wpm.toLocaleString() : "–";
+    $("#st-saved").textContent = saved < 10 ? saved.toFixed(1).replace(/\.0$/, "") : Math.round(saved).toLocaleString();
+    $("#today-sub").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) + " · samples not counted";
+    $("#data-desc").textContent = history.length
+      ? `${history.length.toLocaleString()} ${history.length === 1 ? "dictation" : "dictations"} saved in this browser.`
+      : "Nothing saved yet.";
+  }
+  function renderNavCounts() {
+    $("#nav-history-count").textContent = history.length ? history.length : "";
+    const n = dictionary.length;
+    $("#nav-dict-count").textContent = n ? n : "";
+  }
+
+  function relTime(ts) {
+    const d = new Date(ts), now = new Date();
+    const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    if (dayKey(ts) === dayKey(now)) return "Today, " + time;
+    const y = new Date(now); y.setDate(now.getDate() - 1);
+    if (dayKey(ts) === dayKey(y)) return "Yesterday, " + time;
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ", " + time;
+  }
+
+  function renderChart() {
+    const svg = $("#chart");
+    $$("g", svg).forEach(g => g.remove());
+    const days = [];
+    for (let k = 6; k >= 0; k--) {
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k);
+      days.push({ d, key: dayKey(d), words: 0 });
+    }
+    for (const h of history) { if (h.sample) continue; const day = days.find(x => x.key === dayKey(h.at)); if (day) day.words += h.words; }
+    const total = days.reduce((a, d) => a + d.words, 0);
+    $("#week-total").textContent = total ? `${total.toLocaleString()} words in the last 7 days` : "No dictations in the last 7 days";
+    const max = Math.max(...days.map(d => d.words));
+    const niceMax = max <= 0 ? 100 : (() => { const p = Math.pow(10, Math.floor(Math.log10(max))); return Math.ceil(max / p) * p; })();
+    const W = 700, top = 22, bottom = 140, left = 8, right = 8;
+    const ns = "http://www.w3.org/2000/svg";
+    const g = document.createElementNS(ns, "g");
+    const mk = (tag, attrs, text) => { const n = document.createElementNS(ns, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; g.append(n); return n; };
+    for (const f of [0, 0.5, 1]) {
+      const y = bottom - f * (bottom - top);
+      mk("line", { class: "grid", x1: left, x2: W - right, y1: y, y2: y });
+    }
+    const slot = (W - left - right) / 7, bw = Math.min(54, slot * 0.56);
+    days.forEach((day, i) => {
+      const cx = left + slot * i + slot / 2;
+      const h = day.words ? Math.max(3, (day.words / niceMax) * (bottom - top)) : 3;
+      const cls = "bar" + (i === 6 ? " today" : "") + (day.words ? "" : " zero");
+      mk("rect", { class: cls, x: cx - bw / 2, y: bottom - h, width: bw, height: h, rx: Math.min(6, bw / 4) });
+      if (day.words) mk("text", { class: "val", x: cx, y: bottom - h - 6, "text-anchor": "middle" }, day.words.toLocaleString());
+      const label = i === 6 ? "Today" : day.d.toLocaleDateString(undefined, { weekday: "short" });
+      mk("text", { x: cx, y: bottom + 22, "text-anchor": "middle" }, label);
+    });
+    svg.append(g);
+  }
+
+  function renderHistory() {
+    renderChart();
+    const list = $("#h-list");
+    const q = $("#h-search").value.trim().toLowerCase();
+    const items = q ? history.filter(h => h.text.toLowerCase().includes(q)) : history;
+    list.replaceChildren();
+    $("#clear-history-zone").hidden = history.length === 0;
+    if (!items.length) {
+      list.append(el("div", { class: "empty" },
+        icon(q ? "i-search" : "i-clock"),
+        el("strong", { text: q ? "No matches" : "No dictations yet" }),
+        el("p", { text: q ? `Nothing in your history contains “${$("#h-search").value.trim()}”.` : "Finish a dictation and it appears here. You can copy it again, edit it or delete it." }),
+        q ? null : el("button", { class: "btn btn-tinted", type: "button", onclick: () => showView("dictate") }, icon("i-mic"), "Start dictating")
+      ));
+      return;
+    }
+    for (const h of items.slice(0, 200)) {
+      const wpm = h.ms > 3000 ? Math.round(h.words / (h.ms / 60000)) : null;
+      const item = el("article", { class: "h-item" },
+        el("div", { class: "h-meta" },
+          el("span", { class: "when", text: relTime(h.at) }),
+          el("span", { text: `${h.words} ${h.words === 1 ? "word" : "words"}` }),
+          el("span", { text: fmtTime(h.ms) }),
+          wpm ? el("span", { text: wpm + " wpm" }) : null,
+          h.sample ? el("span", { class: "tag", text: "Sample" }) : null
+        ),
+        el("div", { class: "h-actions" },
+          el("button", { class: "icon-btn", type: "button", title: "Copy", "aria-label": "Copy dictation", onclick: () => copyText(h.text) }, icon("i-copy")),
+          el("button", { class: "icon-btn", type: "button", title: "Edit in Dictate", "aria-label": "Open dictation in Dictate", onclick: () => { setEditorText(h.text, "History"); showView("dictate"); ta.focus(); } }, icon("i-pencil")),
+          el("button", { class: "icon-btn", type: "button", title: "Delete", "aria-label": "Delete dictation", onclick: () => {
+            history = history.filter(x => x.id !== h.id); saveHistory(); renderHistory(); renderStats(); renderNavCounts(); toast("Deleted", "i-trash");
+          } }, icon("i-trash"))
+        ),
+        el("p", { class: "h-text", text: h.text, title: "Click to expand", onclick: e => e.currentTarget.parentElement.classList.toggle("open") })
+      );
+      list.append(item);
+    }
+  }
+
+  // Inline confirmation (the page can't use confirm()).
+  function confirmInline(zone, question, confirmLabel, onConfirm) {
+    const original = Array.from(zone.childNodes);
+    const restore = () => { zone.replaceChildren(...original); original[0] && original[0].focus && original[0].focus(); };
+    const yes = el("button", { class: "btn btn-danger", type: "button", onclick: () => { onConfirm(); restore(); } }, confirmLabel);
+    zone.replaceChildren(el("span", { class: "confirm" }, el("span", { text: question }), yes, el("button", { class: "btn", type: "button", onclick: restore }, "Cancel")));
+    yes.focus();
+  }
+  function clearHistory() { history = []; saveHistory(); renderHistory(); renderStats(); renderNavCounts(); toast("History cleared", "i-trash"); }
+
+  /* ---------------- Dictionary ---------------- */
+  function renderDictionary() {
+    const list = $("#d-list");
+    list.replaceChildren();
+    if (!dictionary.length) {
+      list.append(el("div", { class: "empty" }, icon("i-book"), el("strong", { text: "Your dictionary is empty" }), el("p", { text: "Add a word above, for example a name FluidVoice keeps spelling wrong." })));
+    }
+    for (const e of dictionary) {
+      list.append(el("div", { class: "d-item" },
+        el("div", { class: "chips" }, ...e.triggers.map(t => el("span", { class: "chip", text: t }))),
+        icon("i-arrow", "ic arrow"),
+        el("span", { class: "to", text: e.replacement }),
+        el("button", { class: "icon-btn", type: "button", title: "Remove", "aria-label": `Remove ${e.replacement}`, onclick: () => {
+          dictionary = dictionary.filter(x => x.id !== e.id); saveDictionary(); renderDictionary(); toast(`Removed ${e.replacement}`, "i-trash");
+        } }, icon("i-trash"))
+      ));
+    }
+    renderNavCounts();
+    updateHowtoExample();
+  }
+
+  /* ---------------- Commands reference ---------------- */
+  const visible = s => s === "\n" ? "⏎" : s === "\n\n" ? "¶" : s;
+  function renderCommands() {
+    const grid = $("#cmd-grid");
+    for (const g of COMMAND_GROUPS) {
+      const card = el("div", { class: "card cmd-group" }, el("h2", { text: g.title }));
+      for (const [symbol, , phrases, note] of g.rules) {
+        card.append(el("div", { class: "cmd" },
+          el("div", { class: "say" }, document.createTextNode("“" + phrases[0] + "”"), phrases[1] ? el("small", { text: "  or “" + phrases[1] + "”" }) : null, note ? el("small", { text: "  " + note }) : null),
+          el("span", { class: "key", "aria-label": symbol === "\n" ? "line break" : symbol === "\n\n" ? "new paragraph" : null, text: visible(symbol) })
+        ));
+      }
+      grid.append(card);
+    }
+  }
+  function renderTester() { $("#tester-out").textContent = formatTranscript($("#tester-in").value) || " "; }
+  function updateHowtoExample() {
+    $("#howto-out").textContent = formatTranscript("hey team comma um the fluid voice demo is ready period can we ship it friday question mark", { ...settings, spokenPunctuation: true, removeFillers: true, autoCapitalize: true });
+  }
+
+  /* ---------------- Settings ---------------- */
+  function initSettings() {
+    const sel = $("#set-lang");
+    for (const [code, name] of LANGUAGES) sel.append(el("option", { value: code, text: name }));
+    sel.value = settings.lang;
+    sel.addEventListener("change", () => { settings.lang = sel.value; saveSettings(); toast("Language set to " + sel.options[sel.selectedIndex].text); });
+
+    const toggles = { "#set-punct": "spokenPunctuation", "#set-fillers": "removeFillers", "#set-caps": "autoCapitalize", "#set-copy": "autoCopy" };
+    for (const [id, key] of Object.entries(toggles)) {
+      const input = $(id);
+      input.checked = !!settings[key];
+      input.addEventListener("change", () => { settings[key] = input.checked; saveSettings(); renderTester(); });
+    }
+
+    $$("[data-theme-opt]").forEach(b => b.addEventListener("click", () => { settings.theme = b.dataset.themeOpt; saveSettings(); applyTheme(); }));
+
+    const sw = $("#swatches");
+    const keys = Object.keys(ACCENTS);
+    keys.forEach((key, idx) => {
+      const a = ACCENTS[key];
+      const b = el("button", { class: "swatch", type: "button", role: "radio", "aria-label": a.name, "data-accent": key, style: `--sw:${a.fill}` });
+      b.addEventListener("click", () => { settings.accent = key; saveSettings(); applyAccent(); });
+      b.addEventListener("keydown", e => {
+        const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+        if (!dir) return;
+        e.preventDefault();
+        const next = keys[(idx + dir + keys.length) % keys.length];
+        settings.accent = next; saveSettings(); applyAccent();
+        $(`.swatch[data-accent="${next}"]`).focus();
+      });
+      sw.append(b);
+    });
+  }
+
+  /* ---------------- Wire up ---------------- */
+  function bind() {
+    $$(".nav-item").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
+    recordBtn.addEventListener("click", () => state.mode === "idle" ? startDictation() : stopDictation());
+    $$('[data-action="sample"]').forEach(b => b.addEventListener("click", playSample));
+    $('[data-action="dismiss-notice"]').addEventListener("click", () => { $("#mic-notice").hidden = true; setStatus("idle", "Ready"); });
+    $("#btn-copy").addEventListener("click", () => copyText(ta.value));
+    $("#btn-clear").addEventListener("click", () => { if (!ta.value) return; setEditorText("", "Clear"); toast("Cleared. Use Undo to bring it back.", "i-trash"); });
+    $("#btn-undo").addEventListener("click", () => {
+      if (!state.undo) return;
+      const current = ta.value; ta.value = state.undo.text; state.undo = { text: current, label: "Redo" };
+      autosize(); updateHowto(); toast("Undone", "i-undo");
+    });
+    $("#btn-cleanup").addEventListener("click", () => {
+      const text = ta.value;
+      if (!text.trim()) { toast("Dictate or type something first", "i-alert"); return; }
+      const cleaned = cleanUp(text);
+      if (cleaned === text) { toast("Already clean"); return; }
+      setEditorText(cleaned, "Clean up"); toast("Cleaned up. Use Undo to go back.");
+    });
+    $$("[data-rewrite]").forEach(b => b.addEventListener("click", () => rewrite(b.dataset.rewrite)));
+    $("#btn-ai-stop").addEventListener("click", () => aiController && aiController.abort());
+    ta.addEventListener("input", () => { autosize(); updateHowto(); });
+    $("#h-search").addEventListener("input", renderHistory);
+    $("#btn-clear-history").addEventListener("click", () => confirmInline($("#clear-history-zone"), "Delete every dictation?", "Delete all", clearHistory));
+    $("#btn-clear-history-2").addEventListener("click", () => {
+      if (!history.length) { toast("History is already empty"); return; }
+      confirmInline($("#clear-history-zone-2"), "Delete every dictation?", "Delete all", clearHistory);
+    });
+    $("#btn-reset-dict").addEventListener("click", () => confirmInline($("#reset-dict-zone"), "Remove your own words?", "Reset", () => {
+      dictionary = STARTER_DICTIONARY.map(e => ({ ...e })); saveDictionary(); renderDictionary(); toast("Dictionary reset");
+    }));
+    $("#tester-in").addEventListener("input", renderTester);
+
+    $("#dict-form").addEventListener("submit", e => {
+      e.preventDefault();
+      const triggers = $("#d-triggers").value.split(",").map(s => s.trim()).filter(Boolean);
+      const replacement = $("#d-replacement").value.trim();
+      const err = $("#d-error");
+      if (!triggers.length) { err.textContent = "Type what FluidVoice hears, like “fluid voice”."; err.style.color = "var(--red)"; $("#d-triggers").focus(); return; }
+      if (!replacement) { err.textContent = "Type the word it should write, like “FluidVoice”."; err.style.color = "var(--red)"; $("#d-replacement").focus(); return; }
+      err.innerHTML = "&nbsp;"; err.style.color = "";
+      const existing = dictionary.find(x => x.replacement.toLowerCase() === replacement.toLowerCase());
+      if (existing) existing.triggers = Array.from(new Set([...existing.triggers, ...triggers]));
+      else dictionary.unshift({ id: Date.now().toString(36), triggers, replacement });
+      saveDictionary(); renderDictionary();
+      $("#d-triggers").value = ""; $("#d-replacement").value = ""; $("#d-triggers").focus();
+      toast(`Added ${replacement}`);
+    });
+
+    document.addEventListener("keydown", e => {
+      const t = e.target;
+      const typing = t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(t.tagName));
+      if (e.code === "Space" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey && !$("#view-dictate").hidden) {
+        e.preventDefault();
+        state.mode === "idle" ? startDictation() : stopDictation();
+      } else if (e.key === "Escape" && state.mode !== "idle") {
+        stopDictation();
+      }
+    });
+    window.addEventListener("resize", () => { sizeWave(); autosize(); });
+    window.addEventListener("hashchange", () => showView(location.hash.slice(1), false));
+    if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => requestAnimationFrame(drawWave));
+    new MutationObserver(() => requestAnimationFrame(drawWave)).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+  }
+
+  function init() {
+    initSettings();
+    applyTheme();
+    applyAccent();
+    renderCommands();
+    renderDictionary();
+    renderTester();
+    renderStats();
+    bind();
+    showView((location.hash || "#dictate").slice(1), false);
+    sizeWave();
+    if (!SR) showMicNotice("Dictation isn’t supported in this browser", micHelpText());
+    initAI();
+  }
+  init();
+
+  // Exposed for automated tests only.
+  window.__fluidvoice = { formatTranscript, cleanUp, applySpokenPunctuation, removeFillers, applyDictionary, countWords };
+})();
+</script>
+</body>
+</html>
