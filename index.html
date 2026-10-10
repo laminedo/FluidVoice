@@ -217,7 +217,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent-ink); box-
 .switch:not(:checked) { box-shadow: inset 0 0 0 1.5px var(--fg-3); }
 .switch:checked { background: var(--green); }
 .switch:checked::after { transform: translateX(20px); }
-.switch:focus-visible { outline-offset: 3px; border-radius: 999px; }
+.switch:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; border-radius: 999px; }
 
 /* Segmented control */
 .segmented { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--fill); gap: 2px; flex-wrap: wrap; }
@@ -225,7 +225,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent-ink); box-
   min-height: 30px; padding: 4px 14px; border: 0; border-radius: 7px; background: transparent;
   font-size: var(--t-foot); font-weight: 500; color: var(--fg);
 }
-.segmented button[aria-pressed="true"] { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.04); font-weight: 600; }
+.segmented button[aria-pressed="true"] { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 1.5px var(--fg-3); font-weight: 600; }
 
 /* ---------- Dictate ---------- */
 .composer { padding: 0; overflow: hidden; }
@@ -387,7 +387,6 @@ label.row { cursor: pointer; }
   .h-more { min-height: 44px; }
   .record-hint .btn-plain { min-height: 44px !important; }
   input[type="text"], input[type="search"], select, textarea { min-height: 44px; font-size: 16px; }
-  .editor textarea { font-size: 1.1875rem; }
   .segmented button { min-height: 40px; padding-inline: 16px; }
   .swatches { gap: 2px; }
   .swatch { width: 44px; height: 44px; background: transparent; box-shadow: none; }
@@ -442,7 +441,10 @@ label.row { cursor: pointer; }
   .toast { background: var(--fg); }
   .notice { background: var(--surface); border: 1px solid var(--orange); }
   .pill[data-state="live"], .pill[data-state="warn"] { background: var(--fill); }
-  .btn:hover, .btn-tinted:hover, .btn-filled:hover { filter: brightness(0.95); }
+  .btn:hover { background: var(--fill); filter: brightness(0.95); }
+  .btn-tinted:hover { background: var(--accent-soft); filter: brightness(0.95); }
+  .btn-filled:hover { background: var(--accent); filter: brightness(0.95); }
+  .app-icon { background: var(--accent-ink-l); }
   .composer:has(#transcript:focus-visible) { box-shadow: var(--shadow), 0 0 0 3px var(--accent-ink); }
 }
 @media (hover: none) and (pointer: coarse) { .kbd-hint { display: none; } }
@@ -596,7 +598,7 @@ label.row { cursor: pointer; }
           <h2 class="section-title" style="font-size:var(--t-callout)">Words per day</h2>
           <span class="sub" id="week-total"></span>
         </div>
-        <svg class="chart" id="chart" viewBox="0 0 700 170" role="img" aria-labelledby="chart-desc"><desc id="chart-desc">Words dictated on each of the last seven days.</desc></svg>
+        <svg class="chart" id="chart" viewBox="0 0 700 170" role="img" aria-label="Words dictated on each of the last seven days."></svg>
       </div>
       <div class="toolbar">
         <div class="search">
@@ -832,8 +834,8 @@ label.row { cursor: pointer; }
     { title: "Symbols", rules: [
       ["@", "N", ["at sign"]],
       ["&", "S", ["ampersand"]],
-      ["#", "L", ["hashtag", "hash sign", "hash", "pound sign", "number sign"]],
-      ["%", "R", ["percent sign", "percent"]],
+      ["#", "L", ["hashtag", "hash sign", "pound sign", "number sign"]],
+      ["%", "R", ["percent sign", "percent"], "“percent” right after a number"],
       ["*", "S", ["asterisk"]],
       ["/", "N", ["slash", "forward slash"]],
       ["\\", "N", ["backslash", "back slash"]],
@@ -842,8 +844,8 @@ label.row { cursor: pointer; }
       ["~", "N", ["tilde"]]
     ]},
     { title: "Layout", rules: [
-      ["\n", "B", ["new line", "next line"]],
-      ["\n\n", "B", ["new paragraph", "next paragraph"]]
+      ["\n", "B", ["new line"]],
+      ["\n\n", "B", ["new paragraph"]]
     ]},
     { title: "Brackets and quotes", rules: [
       ["(", "L", ["open parenthesis", "open paren", "left paren"]],
@@ -896,6 +898,7 @@ label.row { cursor: pointer; }
         const rule = RULES.get(key);
         if (!rule) continue;
         if (rule.phrase === "dot" && !(i > 0 && i + 1 < words.length && TLDS.has(norm(words[i + 1])))) continue;
+        if (rule.phrase === "percent" && !(i > 0 && /\d$/.test(words[i - 1]))) continue; // "ten percent" stays words, "10 percent" -> "10%"
         hit = rule; len = n; break;
       }
       if (hit) { tokens.push({ t: hit.symbol, sp: hit.spacing }); i += len; }
@@ -933,7 +936,9 @@ label.row { cursor: pointer; }
     const alt = (map, sep) => [...map.values()].sort((a, b) => b.t.length - a.t.length).map(x => escapeRe(x.t).replace(/\s+/g, sep)).join("|");
     if (spaced.size) {
       // Whole words only. Marks (\p{M}) count as letters so Hindi vowel signs don't split a word.
-      const re = new RegExp("(^|[^\\p{L}\\p{M}\\p{N}])(" + alt(spaced, "\\s+") + ")(?![\\p{L}\\p{M}\\p{N}])", "giu");
+      // Han, Kana and Thai letters also count as a boundary: Chinese text puts Latin names right next to them.
+      const NS = "\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Thai}";
+      const re = new RegExp("(^|[^\\p{L}\\p{M}\\p{N}]|[" + NS + "])(" + alt(spaced, "\\s+") + ")(?=$|[^\\p{L}\\p{M}\\p{N}]|[" + NS + "])", "giu");
       text = text.replace(re, (m, pre, word) => { const hit = spaced.get(dictKey(word, true)); return pre + (hit ? hit.r : word); });
     }
     if (unspaced.size) {
@@ -944,7 +949,7 @@ label.row { cursor: pointer; }
   }
 
   // Abbreviations like "e.g." and "Dr." don't end a sentence.
-  const ABBREV_END = /(?:^|\s)(?:\p{L}\.){1,3}$|(?:^|\s)(?:mr|mrs|ms|dr|st|vs|etc|approx)\.$/iu;
+  const ABBREV_END = /(?:^|\s)(?:\p{L}\.){2,3}$|(?:^|\s)(?:mr|mrs|ms|dr|st|vs|etc|approx)\.$/iu;
   function capitalize(text, atStart = true) {
     const up = ch => { try { return ch.toLocaleUpperCase(settings.lang); } catch { return ch.toUpperCase(); } };
     // Words with a capital inside are left alone: iPhone, macOS, eBay.
@@ -969,10 +974,14 @@ label.row { cursor: pointer; }
 
   // Local clean-up for text that is already written: fillers, spacing around punctuation, dictionary, capitals.
   // Links, email addresses and file names are set aside first so their dots and colons stay intact.
+  // Not "it" or "in": "did it.it was fun" should still get its missing space.
+  const PROTECT_ENDINGS = ["de", "fr", "es", "nl", "se", "pl", "ru", "ca", "au", "jp", "cn", "br", "ch", "eu", "info", "xyz", "tv",
+    "pdf", "png", "jpg", "jpeg", "gif", "csv", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "zip", "mp3", "mp4"];
   const PROTECT = new RegExp(
     "[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+" +                                    // email
     "|\\b[a-z][\\w+.-]*:\\/\\/\\S+" +                                         // https://…
-    "|\\b(?:[\\w-]+\\.)+(?:" + [...TLDS].join("|") + ")\\b(?:[/?#]\\S*)?",   // example.com/path, notes.txt
+    "|\\bwww\\.[\\w.-]+\\w(?:[/?#]\\S*)?" +                                // www.example.de
+    "|\\b(?:[\\w-]+\\.)+(?:" + [...TLDS, ...PROTECT_ENDINGS].join("|") + ")\\b(?:[/?#]\\S*)?",   // example.com/path, notes.pdf
     "gi");
   function cleanUp(text) {
     const kept = [];
@@ -1123,7 +1132,7 @@ label.row { cursor: pointer; }
     live.append(document.createTextNode(formatted));
     if (state.interim) live.append(el("span", { class: "interim", text: (formatted ? " " : "") + state.interim }));
     live.append(el("span", { class: "caret", "aria-hidden": "true" }));
-    if (!state.base && !formatted && !state.interim && state.mode === "live") live.prepend(el("span", { class: "interim", text: "Listening…" }));
+    if (!state.base && !formatted && !state.interim && state.mode === "live") live.prepend(el("span", { class: "interim", text: state.heard ? "Listening…" : "Waiting for the microphone…" }));
   }
 
   function setEditingLocked(locked) {
@@ -1180,7 +1189,7 @@ label.row { cursor: pointer; }
     recordBtn.setAttribute("aria-label", "Start dictation");
     $("#record-icon").setAttribute("href", "#i-mic");
     setEditingLocked(false);
-    if ($("#mic-notice").hidden) setStatus("idle", "Ready"); else setStatus("warn", "Microphone unavailable");
+    if ($("#mic-notice").hidden) setStatus("idle", "Ready"); else $("#status").dataset.state = "warn"; // keep the notice's own label
     $("#timer").textContent = fmtTime(elapsed);
     autosize();
     updateHowto();
@@ -1194,7 +1203,7 @@ label.row { cursor: pointer; }
       else pending.resolve(new Blob([ta.value], { type: "text/plain" }));
     }
     if (words > 0) {
-      history.unshift({ id: Date.now().toString(36), text: formatted, raw, words, ms: Math.round(elapsed), at: Date.now(), sample });
+      history.unshift({ id: Date.now().toString(36), text: formatted.trim(), raw, words, ms: Math.round(elapsed), at: Date.now(), sample });
       if (history.length > 500) history.length = 500;
       saveHistory();
       renderStats();
@@ -1205,11 +1214,11 @@ label.row { cursor: pointer; }
     }
   }
 
-  function showMicNotice(title, body) {
+  function showMicNotice(title, body, pill = "Microphone unavailable") {
     $("#mic-notice-title").textContent = title;
     $("#mic-notice-body").textContent = body;
     $("#mic-notice").hidden = false;
-    setStatus("warn", "Microphone unavailable");
+    setStatus("warn", pill);
   }
 
   function micHelpText() {
@@ -1243,7 +1252,7 @@ label.row { cursor: pointer; }
     clearTimeout(state.stopTimer);
     state.stopRequested = false; state.restarts = 0; state.heard = false;
     enterRecordingUI("live");
-    if (perm !== "granted") setStatus("live", "Waiting for microphone permission…");
+    if (perm !== "granted") setStatus("live", "Waiting for permission…");
     startRecognizer();
     // If the browser never starts capturing audio, say so instead of showing "Listening" forever.
     // A first-time visitor may need a while to answer the permission prompt, so wait longer then.
@@ -1270,6 +1279,7 @@ label.row { cursor: pointer; }
       if (rec !== state.rec) return;
       state.heard = true;
       setStatus("live", "Listening");
+      renderLive();
     };
     rec.onresult = e => {
       if (rec !== state.rec) return;
@@ -1311,7 +1321,7 @@ label.row { cursor: pointer; }
           if (state.interim) { state.finalRaw += " " + state.interim; state.interim = ""; }
           try { rec.start(); return; } catch { /* fall through to finish */ }
         } else {
-          showMicNotice("Dictation paused", "FluidVoice stopped listening after a long silence. Press the microphone to keep going.");
+          showMicNotice("Dictation paused", "FluidVoice stopped listening after a long silence. Press the microphone to keep going.", "Paused");
         }
       }
       if (state.mode === "live") finishRecording();
@@ -1742,7 +1752,7 @@ label.row { cursor: pointer; }
   function updateFillerHint() {
     $("#fillers-desc").textContent = isEnglish()
       ? "Drops um, uh, er, hmm and similar sounds."
-      : "Works for English only, so it’s off while you dictate in " + ($("#set-lang").selectedOptions[0] || {}).textContent + ".";
+      : "Works for English only. It has no effect while you dictate in " + ($("#set-lang").selectedOptions[0] || {}).textContent + ".";
   }
 
   /* ---------------- Settings ---------------- */
@@ -1847,10 +1857,14 @@ label.row { cursor: pointer; }
       toast(`Added ${replacement}`);
     });
 
+    // Remember which control was last focused by a click or tap, so Space can start dictation after clicking a button.
+    let pointerFocused = null;
+    document.addEventListener("pointerdown", e => { pointerFocused = e.target && e.target.closest ? e.target.closest("button, input") : null; }, true);
     document.addEventListener("keydown", e => {
+      if (e.key === "Tab") pointerFocused = null;
       const t = e.target;
       // Space types or presses whatever has keyboard focus. Buttons clicked with a mouse don't keep it.
-      const keyboardFocused = n => { try { return n.matches(":focus-visible"); } catch { return true; } };
+      const keyboardFocused = n => n !== pointerFocused;
       const typing = t instanceof HTMLElement && (t.isContentEditable
         || /^(TEXTAREA|SELECT)$/.test(t.tagName)
         || (t.tagName === "INPUT" && !/^(checkbox|radio|button|submit|reset|range|color)$/.test(t.type))
@@ -1863,7 +1877,12 @@ label.row { cursor: pointer; }
         stopDictation();
       }
     });
-    window.addEventListener("resize", () => { sizeWave(); autosize(); if (!$("#view-history").hidden) renderChart(); });
+    window.addEventListener("resize", () => {
+      sizeWave(); autosize();
+      if ($("#view-history").hidden) return;
+      renderChart();
+      $$("#h-list .h-item:not(.open)").forEach(it => { const p = $(".h-text", it), b = $(".h-more", it); if (p && b) b.hidden = p.scrollHeight <= p.clientHeight + 1; });
+    });
     window.addEventListener("hashchange", () => showView(location.hash.slice(1), false));
     if (window.matchMedia) {
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
