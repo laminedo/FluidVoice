@@ -360,6 +360,8 @@ label.row { cursor: pointer; }
 .swatch[aria-checked="true"]::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--fg); }
 .status-ok { color: var(--green); font-weight: 600; }
 .status-off { color: var(--fg-2); font-weight: 600; }
+.install-steps { margin: 0; padding: 4px 18px 16px 40px; display: flex; flex-direction: column; gap: 6px; font-size: var(--t-subhead); color: var(--fg-2); max-width: 70ch; }
+a.btn { text-decoration: none; }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--t-foot); color: var(--fg-2); }
 
 /* ---------- Toast ---------- */
@@ -716,6 +718,22 @@ label.row { cursor: pointer; }
             <div class="row-text"><span class="label">Write Mode with Claude</span><span class="desc" id="ai-desc">Rewrites your dictation as polished text, an email, bullet points or a shorter version.</span></div>
             <span id="ai-status" class="status-off">Checking…</span>
           </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2 class="group-title">Other websites</h2>
+        <div class="card">
+          <div class="row">
+            <div class="row-text"><span class="label">Chrome extension</span><span class="desc">Dictate straight into Gmail, Google Docs, ChatGPT and any other text box on the web.</span></div>
+            <a class="btn btn-tinted" href="https://laminedo.github.io/FluidVoice/fluidvoice-extension.zip" target="_blank" rel="noopener">Download</a>
+          </div>
+          <ol class="install-steps">
+            <li>Unzip the download and move the <strong>fluidvoice-extension</strong> folder somewhere it can stay, like Documents.</li>
+            <li>In Chrome, go to <strong>chrome://extensions</strong> and turn on <strong>Developer mode</strong>.</li>
+            <li>Click <strong>Load unpacked</strong> and choose the folder.</li>
+            <li>Click in any text box and press <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>D</kbd> (<kbd>⌥</kbd> <kbd>⇧</kbd> <kbd>D</kbd> on a Mac) to talk.</li>
+          </ol>
         </div>
       </div>
 
