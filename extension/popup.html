@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FluidVoice Dictation</title>
+<link rel="stylesheet" href="popup.css">
+<style>
+  body { width: 360px; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+</style>
+</head>
+<body>
+  <div class="brand">
+    <img src="icons/icon48.png" alt="">
+    <div>
+      <div class="brand-name">FluidVoice Dictation</div>
+      <div class="brand-sub">Talk into any text box on the web</div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2 class="group-title">How to use</h2>
+    <div class="card">
+      <ol class="steps">
+        <li>Click in a text box on any website.</li>
+        <li>Press <kbd id="shortcut">Alt+Shift+D</kbd>, or click the small microphone in the box, and talk.</li>
+        <li>Press the shortcut again, or <strong>Done</strong>. Your words are typed where the cursor is.</li>
+      </ol>
+      <div class="row">
+        <span class="hint" id="shortcut-hint">Say “comma”, “period” or “new line” for punctuation.</span>
+        <button class="btn" type="button" id="change-shortcut">Change shortcut</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2 class="group-title">Settings</h2>
+    <div class="card">
+      <div class="row">
+        <div class="row-text"><label class="label" for="lang">Language</label></div>
+        <select id="lang"></select>
+      </div>
+      <label class="row" for="spokenPunctuation">
+        <span class="row-text"><span class="label" id="spokenPunctuation-label">Spoken punctuation</span></span>
+        <input type="checkbox" class="switch" role="switch" id="spokenPunctuation" aria-labelledby="spokenPunctuation-label">
+      </label>
+      <label class="row" for="removeFillers">
+        <span class="row-text"><span class="label" id="removeFillers-label">Remove filler words</span><span class="desc" id="removeFillers-desc">English only: um, uh, er, hmm…</span></span>
+        <input type="checkbox" class="switch" role="switch" id="removeFillers" aria-labelledby="removeFillers-label" aria-describedby="removeFillers-desc">
+      </label>
+      <label class="row" for="autoCapitalize">
+        <span class="row-text"><span class="label" id="autoCapitalize-label">Capitalize sentences</span></span>
+        <input type="checkbox" class="switch" role="switch" id="autoCapitalize" aria-labelledby="autoCapitalize-label">
+      </label>
+      <label class="row" for="showButton">
+        <span class="row-text"><span class="label" id="showButton-label">Show mic button in text boxes</span></span>
+        <input type="checkbox" class="switch" role="switch" id="showButton" aria-labelledby="showButton-label">
+      </label>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2 class="group-title">Dictionary</h2>
+    <div class="card">
+      <div id="dict-list"></div>
+      <form class="dict-form" id="dict-form" novalidate>
+        <input type="text" id="d-from" placeholder="When I say" aria-label="When I say" autocomplete="off">
+        <input type="text" id="d-to" placeholder="Write" aria-label="Write" autocomplete="off">
+        <button class="btn btn-filled" type="submit">Add</button>
+      </form>
+      <div class="hint" id="d-msg" role="status" style="padding: 0 14px 10px">Separate different spellings with commas.</div>
+    </div>
+  </div>
+
+  <div class="hint">Your audio goes to Chrome’s online speech service (Google; Microsoft in Edge). Settings stay in this browser. <a href="https://laminedo.github.io/FluidVoice/" target="_blank" rel="noopener">FluidVoice web app</a></div>
+
+  <script src="defaults.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

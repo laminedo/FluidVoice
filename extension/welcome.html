@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Welcome to FluidVoice Dictation</title>
+<link rel="icon" href="icons/icon32.png">
+<link rel="stylesheet" href="popup.css">
+<style>
+  body { padding: 48px 16px 64px; }
+  main { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+  h1 { margin: 6px 0 0; font: 700 34px/1.1 var(--font-display); letter-spacing: -.025em; text-wrap: balance; }
+  .lead { margin: 6px 0 0; color: var(--fg-2); font-size: 17px; max-width: 56ch; }
+  .brand img { width: 56px; height: 56px; }
+  .try { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .try label { font-weight: 600; font-size: 13px; color: var(--fg-2); }
+  textarea { width: 100%; min-height: 120px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--sep); background: var(--fill-2); font: 17px/1.5 var(--font-display); color: var(--fg); resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--accent-ink); box-shadow: 0 0 0 3px rgba(58,200,198,.3); }
+  .steps { font-size: 15px; gap: 10px; padding-block: 16px; }
+  .note { padding: 14px 16px; font-size: 13px; color: var(--fg-2); }
+  .note p { margin: 0 0 6px; } .note p:last-child { margin: 0; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <div class="brand"><img src="icons/icon128.png" alt=""></div>
+    <h1>FluidVoice is ready</h1>
+    <p class="lead">Talk into any text box on the web: email, chats, documents and forms. FluidVoice adds the punctuation you say, drops the “um”s and types the text where your cursor is.</p>
+  </div>
+
+  <div class="group">
+    <h2 class="group-title">How to use it</h2>
+    <div class="card">
+      <ol class="steps">
+        <li>Click in a text box on any website.</li>
+        <li>Press <kbd class="shortcut">Alt+Shift+D</kbd> (<kbd>⌥ Option</kbd><kbd>⇧ Shift</kbd><kbd>D</kbd> on a Mac), or click the small microphone that appears in the box.</li>
+        <li>The first time on each website, Chrome asks to use your microphone. Choose <strong>Allow</strong>.</li>
+        <li>Talk. Say “comma”, “period”, “question mark” or “new line” where you want them.</li>
+        <li>Press the shortcut again or click <strong>Done</strong>. Press <kbd>Esc</kbd> to cancel.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2 class="group-title">Try it here</h2>
+    <div class="card try">
+      <label for="practice">Click here, then press the shortcut or the mic button</label>
+      <textarea id="practice" placeholder="Try saying: hey team comma the demo is ready period"></textarea>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2 class="group-title">Good to know</h2>
+    <div class="card note">
+      <p>Pin the extension so its menu is one click away: click the puzzle-piece icon next to the address bar, then the pin next to FluidVoice Dictation.</p>
+      <p>It works on websites, not in desktop apps like Word, or on Chrome’s own pages. For typing into any Mac app, use the FluidVoice Mac app.</p>
+      <p>Your audio goes to Chrome’s online speech service (Google; Microsoft in Edge). Password fields are never used.</p>
+    </div>
+  </div>
+</main>
+<script src="defaults.js"></script>
+<script src="format.js"></script>
+<script src="content.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

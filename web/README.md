@@ -17,6 +17,10 @@ A browser version of FluidVoice: talk, and it writes clean text. It is one file,
 - **History and Today stats**: words dictated, speaking pace, and time saved compared with typing.
 - **Light and dark mode**, and the Mac app's five accent colors.
 
+## Use it in other websites
+
+The **FluidVoice Chrome extension** types your dictation straight into Gmail, Google Docs, ChatGPT and any other text box on the web. Download it from <https://laminedo.github.io/FluidVoice/fluidvoice-extension.zip>. Install steps are in the app under **Settings → Other websites**, and in `extension/README.md`.
+
 ## How to open it
 
 **Easiest:** go to <https://laminedo.github.io/FluidVoice/> in **Chrome**, **Edge** or **Safari**. When the browser asks for the microphone, choose **Allow**. On iPhone and iPad, use **Safari**.
